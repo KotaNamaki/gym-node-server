@@ -1,0 +1,51 @@
+import {getDBPool} from '../config/db.js';
+
+export const getUserById = async (req, res) => {
+    try {
+        const {id} = req.params;
+        const db = await getDBPool();
+        const rows = await db.query('SELECT id, nama, email, role FROM user WHERE id = ?', [id]);
+        if (rows.length === 0) {
+            return res.status(404).json({message: 'User not found'});
+        }
+        res.json(rows[0]);
+    }
+    catch (error) {
+        console.error(`Failed to get user_id ${req.params.id}:`, error);
+        res.status(500).json({ message: 'Error fetching user.' });
+    }
+}
+
+export const getUserByEmail = async (req, res) => {
+    try {
+        const {email} = req.params;
+        const db = await getDBPool();
+        const rows = await db.query('SELECT id, nama, email, role FROM user WHERE email = ?', [email]);
+        if (rows.length === 0) {
+            return res.status(404).json({message: 'User not found'});
+        }
+        res.json(rows[0]);
+    } catch (error) {
+        console.error(`Failed to get email ${req.params.email}:`, error);
+        res.status(500).json({ message: 'Error fetching user email.' });
+    }
+}
+
+export const deleteUserId = async (req, res) => {
+    try {
+        const {id} = req.params;
+        const loggedInUserRole = req.user.role;
+        if (loggedInUserRole !== 'admin') {
+            return res.status(403).json({message: 'Forbidden'});
+        }
+        const db = await getDBPool();
+        const result = await db.query('DELETE FROM user WHERE id = ?', [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({message: 'User not found'});
+        }
+        res.json({message: 'User deleted'});
+    } catch (error) {
+        console.error(`Failed to delete user_id ${req.params.id}:`, error);
+        res.status(500).json({ message: 'Error deleting user.' });
+    }
+}
