@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymBuddy API Tester (Fixed)</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #1a73e8; text-align: center; }
+        .auth-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .auth-panel input, .auth-panel select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #0c5fbd; }
+        .logout-btn { background: #dc3545; }
+        .logout-btn:hover { background: #b02a37; }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        .api-list {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .api-list h3 { margin-top: 0; }
+        .api-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .api-item:hover { background: #f1f3f4; }
+        .api-item.selected {
+            background: #e8f0fe;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        .request-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .method-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .method-GET { background: #28a745; color: white; }
+        .method-POST { background: #ffc107; color: black; }
+        .method-PUT { background: #17a2b8; color: white; }
+        .method-DELETE { background: #dc3545; color: white; }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+        textarea {
+            font-family: monospace;
+            height: 100px;
+        }
+        .send-btn {
+            margin-top: 10px;
+            background: #28a745;
+        }
+        .response-area {
+            margin-top: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+        }
+        .response-area pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            margin: 0;
+        }
+        @media (max-width: 800px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🏋️ GymBuddy API Tester (Fixed)</h1>
+
+    <div class="auth-panel">
+        <div style="flex:1">
+            <label>Email:</label>
+            <input type="email" id="loginEmail" placeholder="email@example.com" value="customer@test.com">
+        </div>
+        <div style="flex:1">
+            <label>Password:</label>
+            <input type="password" id="loginPassword" placeholder="password" value="123456">
+        </div>
+        <button id="loginBtn">Login</button>
+        <button id="registerBtn" style="background:#6c757d;">Register Demo User</button>
+        <button id="logoutBtn" class="logout-btn" style="display:none;">Logout</button>
+    </div>
+
+    <div id="userInfo" style="background:#e2f0e6; padding:10px; border-radius:8px; margin-bottom:20px; display:none;">
+        ✅ Logged in as: <strong id="userName"></strong> (Role: <span id="userRole"></span>)
+    </div>
+
+    <div class="main-grid">
+        <div class="api-list">
+            <h3>📡 Endpoints</h3>
+            <div id="endpointList"></div>
+        </div>
+        <div class="request-panel">
+            <h3 id="selectedEndpointTitle">Pilih endpoint</h3>
+            <div id="requestForm"></div>
+            <button id="sendRequestBtn" class="send-btn" style="display:none;">🚀 Send Request</button>
+            <div class="response-area" id="responseArea" style="display:none;">
+                <strong>Response:</strong>
+                <pre id="responseContent"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:5000/api';
+    let authToken = localStorage.getItem('gymbuddy_token') || null;
+    let currentUser = null;
+
+    const endpoints = [
+        { group: "Auth", name: "Login", method: "POST", path: "/auth/login", bodyExample: { email: "customer@test.com", password: "123456" }, needAuth: false },
+        { group: "Auth", name: "Register", method: "POST", path: "/auth/register", bodyExample: { nama: "Test User", email: "newuser@test.com", password: "123456", role: "customer", propinsi: "DKI Jakarta", kota: "Jakarta Selatan" }, needAuth: false },
+        { group: "User", name: "Get User by ID", method: "GET", path: "/user/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "User", name: "Get User by Email", method: "GET", path: "/user/email/:email", pathParams: [{ name: "email", value: "customer@test.com" }], needAuth: true },
+        { group: "User", name: "Delete User (Admin)", method: "DELETE", path: "/user/:id", pathParams: [{ name: "id", value: "2" }], needAuth: true, roles: ["admin"] },
+        { group: "User", name: "Register via User Controller", method: "POST", path: "/user/register", bodyExample: { nama: "Another", email: "another@test.com", password: "123", role: "customer", propinsi: "Jabar", kota: "Bandung" }, needAuth: false },
+        { group: "Session", name: "Get All Sessions", method: "GET", path: "/sessions", needAuth: true },
+        { group: "Session", name: "Get Session by ID", method: "GET", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "Session", name: "Create Session", method: "POST", path: "/sessions", bodyExample: { title: "Yoga Pagi", deskripsi: "Relaxing yoga", trainer_id: 1, start_time: "2026-05-01 08:00:00", end_time: "2026-05-01 09:00:00", price: 50000, status: "scheduled" }, needAuth: true, roles: ["trainer","admin"] },
+        { group: "Session", name: "Update Session", method: "PUT", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], bodyExample: { title: "Yoga Updated", price: 60000 }, needAuth: true, roles: ["trainer","admin"] },
+        { group: "Session", name: "Delete Session", method: "DELETE", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["admin"] },
+        { group: "Session", name: "Upcoming Sessions", method: "GET", path: "/sessions/upcoming", needAuth: true },
+        { group: "Booking", name: "Get All Bookings", method: "GET", path: "/bookings", needAuth: true, roles: ["admin"] },
+        { group: "Booking", name: "Get Booking by ID", method: "GET", path: "/bookings/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "Booking", name: "Create Booking", method: "POST", path: "/bookings", bodyExample: { session_id: 1, status: "Pending" }, needAuth: true, roles: ["customer"] },
+        { group: "Booking", name: "Update Booking Status", method: "PUT", path: "/bookings/:id/status", pathParams: [{ name: "id", value: "1" }], bodyExample: { status: "Confirmed" }, needAuth: true, roles: ["trainer","admin"] },
+        { group: "Booking", name: "My Bookings", method: "GET", path: "/bookings/my", needAuth: true, roles: ["customer"] },
+        { group: "Progress", name: "Get All Progress", method: "GET", path: "/progress", needAuth: true, roles: ["admin"] },
+        { group: "Progress", name: "My Progress", method: "GET", path: "/progress/my", needAuth: true, roles: ["customer"] },
+        { group: "Progress", name: "Create Progress", method: "POST", path: "/progress", bodyExample: { booking_id: 1, activity: "Lari", duration: 30, note: "Terasa ringan" }, needAuth: true, roles: ["customer"] },
+        { group: "Progress", name: "Delete Progress", method: "DELETE", path: "/progress/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["customer","admin"] },
+        { group: "Review", name: "Get All Reviews", method: "GET", path: "/reviews", needAuth: true },
+        { group: "Review", name: "Get Reviews by Session", method: "GET", path: "/reviews/session/:session_id", pathParams: [{ name: "session_id", value: "1" }], needAuth: true },
+        { group: "Review", name: "Create Review", method: "POST", path: "/reviews", bodyExample: { session_id: 1, rating_score: 5, comment: "Great session!" }, needAuth: true, roles: ["customer"] },
+        { group: "Review", name: "Delete Review", method: "DELETE", path: "/reviews/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["customer","admin"] },
+        { group: "Analytics", name: "User Stats", method: "GET", path: "/analytics/users", needAuth: true, roles: ["admin"] },
+        { group: "Analytics", name: "Booking Stats", method: "GET", path: "/analytics/bookings", needAuth: true, roles: ["admin"] },
+        { group: "Analytics", name: "Session Stats", method: "GET", path: "/analytics/sessions", needAuth: true, roles: ["admin"] },
+        { group: "Views", name: "Matched Trainer Customer", method: "GET", path: "/views/matched-trainer-customer", needAuth: true },
+        { group: "Views", name: "Session Participants", method: "GET", path: "/views/session-participants", needAuth: true },
+        { group: "Views", name: "Trainer Schedule", method: "GET", path: "/views/trainer-schedule", needAuth: true },
+        { group: "Views", name: "Customer Booking History", method: "GET", path: "/views/customer-booking-history", needAuth: true },
+    ];
+
+    function renderEndpoints() {
+        const container = document.getElementById('endpointList');
+        container.innerHTML = '';
+        const groups = {};
+        endpoints.forEach(ep => {
+            if (!groups[ep.group]) groups[ep.group] = [];
+            groups[ep.group].push(ep);
+        });
+        for (const group in groups) {
+            const groupDiv = document.createElement('div');
+            groupDiv.innerHTML = `<strong style="display:block; margin-top:10px;">${group}</strong>`;
+            container.appendChild(groupDiv);
+            groups[group].forEach(ep => {
+                const item = document.createElement('div');
+                item.className = 'api-item';
+                item.innerHTML = `<span class="method-${ep.method} method-badge">${ep.method}</span> ${ep.name}`;
+                item.onclick = () => selectEndpoint(ep);
+                container.appendChild(item);
+            });
+        }
+    }
+
+    let selectedEndpoint = null;
+    function selectEndpoint(ep) {
+        selectedEndpoint = ep;
+        document.getElementById('selectedEndpointTitle').innerHTML = `${ep.method} ${ep.name}`;
+        const formDiv = document.getElementById('requestForm');
+        let html = `<div><strong>Path:</strong> ${ep.path}</div>`;
+        if (ep.pathParams) {
+            html += `<div><strong>Path Parameters:</strong></div>`;
+            ep.pathParams.forEach(param => {
+                html += `<label>${param.name}:</label><input type="text" id="pp_${param.name}" value="${param.value || ''}" placeholder="${param.name}">`;
+            });
+        }
+        if (ep.bodyExample) {
+            html += `<div><strong>Body (JSON):</strong></div>`;
+            html += `<textarea id="requestBody">${JSON.stringify(ep.bodyExample, null, 2)}</textarea>`;
+        } else if (ep.method !== 'GET') {
+            html += `<div><strong>Body (JSON):</strong></div>`;
+            html += `<textarea id="requestBody" placeholder='{"key":"value"}'></textarea>`;
+        }
+        formDiv.innerHTML = html;
+        document.getElementById('sendRequestBtn').style.display = 'block';
+        document.getElementById('responseArea').style.display = 'none';
+    }
+
+    async function sendRequest() {
+        if (!selectedEndpoint) return;
+        if (selectedEndpoint.needAuth && !authToken) {
+            alert('Harap login terlebih dahulu!');
+            return;
+        }
+        if (selectedEndpoint.roles && currentUser && !selectedEndpoint.roles.includes(currentUser.role)) {
+            alert(`Endpoint ini membutuhkan role: ${selectedEndpoint.roles.join(', ')}. Role Anda: ${currentUser.role}`);
+            return;
+        }
+
+        let url = API_BASE_URL + selectedEndpoint.path;
+        if (selectedEndpoint.pathParams) {
+            for (let param of selectedEndpoint.pathParams) {
+                const inputVal = document.getElementById(`pp_${param.name}`)?.value || param.value;
+                url = url.replace(`:${param.name}`, inputVal);
+            }
+        }
+
+        const method = selectedEndpoint.method;
+        let body = null;
+        if (selectedEndpoint.bodyExample || document.getElementById('requestBody')) {
+            const bodyText = document.getElementById('requestBody')?.value;
+            if (bodyText) {
+                try {
+                    body = JSON.parse(bodyText);
+                } catch(e) {
+                    alert('Invalid JSON body');
+                    return;
+                }
+            }
+        }
+
+        const options = {
+            method: method,
+            headers: { 'Content-Type': 'application/json' }
+        };
+        if (authToken) {
+            options.headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        if (body) {
+            options.body = JSON.stringify(body);
+        }
+
+        try {
+            const response = await fetch(url, options);
+            const contentType = response.headers.get('content-type');
+            let data;
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const text = await response.text();
+                data = { error: 'Non-JSON response', raw: text.substring(0, 500) };
+            }
+            document.getElementById('responseArea').style.display = 'block';
+            document.getElementById('responseContent').innerHTML = JSON.stringify({
+                status: response.status,
+                statusText: response.statusText,
+                data: data
+            }, null, 2);
+        } catch (err) {
+            document.getElementById('responseArea').style.display = 'block';
+            document.getElementById('responseContent').innerHTML = `Error: ${err.message}`;
+        }
+    }
+
+    // ==================== FIXED LOGIN with better error handling ====================
+    async function login(email, password) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const contentType = res.headers.get('content-type');
+            let result;
+            if (contentType && contentType.includes('application/json')) {
+                result = await res.json();
+            } else {
+                const rawText = await res.text();
+                alert(`Server returned non-JSON (status ${res.status}). Check backend.\nRaw: ${rawText.substring(0, 200)}`);
+                return;
+            }
+
+            if (res.ok && result.token) {
+                authToken = result.token;
+                currentUser = result.user;
+                localStorage.setItem('gymbuddy_token', authToken);
+                localStorage.setItem('gymbuddy_user', JSON.stringify(currentUser));
+                document.getElementById('userInfo').style.display = 'block';
+                document.getElementById('userName').innerText = currentUser.nama;
+                document.getElementById('userRole').innerText = currentUser.role;
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('registerBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'inline-block';
+                alert(`Login sukses sebagai ${currentUser.nama} (${currentUser.role})`);
+                renderEndpoints();
+            } else {
+                alert('Login gagal: ' + (result.message || 'Unknown error'));
+            }
+        } catch(err) {
+            alert('Login error: ' + err.message);
+        }
+    }
+
+    function logout() {
+        authToken = null;
+        currentUser = null;
+        localStorage.removeItem('gymbuddy_token');
+        localStorage.removeItem('gymbuddy_user');
+        document.getElementById('userInfo').style.display = 'none';
+        document.getElementById('loginBtn').style.display = 'inline-block';
+        document.getElementById('registerBtn').style.display = 'inline-block';
+        document.getElementById('logoutBtn').style.display = 'none';
+        alert('Logged out');
+    }
+
+    async function registerDemo() {
+        const demoUser = {
+            nama: "Demo Customer",
+            email: "customer@test.com",
+            password: "123456",
+            role: "customer",
+            propinsi: "DKI Jakarta",
+            kota: "Jakarta Pusat"
+        };
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(demoUser)
+            });
+            const contentType = res.headers.get('content-type');
+            let result;
+            if (contentType && contentType.includes('application/json')) {
+                result = await res.json();
+            } else {
+                const rawText = await res.text();
+                alert(`Server returned non-JSON (status ${res.status}).\nRaw: ${rawText.substring(0, 200)}`);
+                return;
+            }
+            if (res.ok || res.status === 201) {
+                alert('Demo user registered! Silakan login.');
+            } else {
+                alert('Register demo: ' + (result.message || 'Gagal, mungkin email sudah ada'));
+            }
+        } catch(e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    function loadStoredAuth() {
+        const token = localStorage.getItem('gymbuddy_token');
+        const userStr = localStorage.getItem('gymbuddy_user');
+        if (token && userStr) {
+            authToken = token;
+            currentUser = JSON.parse(userStr);
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userName').innerText = currentUser.nama;
+            document.getElementById('userRole').innerText = currentUser.role;
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('registerBtn').style.display = 'none';
+            document.getElementById('logoutBtn').style.display = 'inline-block';
+        } else {
+            document.getElementById('loginBtn').style.display = 'inline-block';
+            document.getElementById('registerBtn').style.display = 'inline-block';
+            document.getElementById('logoutBtn').style.display = 'none';
+        }
+    }
+
+    document.getElementById('loginBtn').onclick = () => {
+        const email = document.getElementById('loginEmail').value;
+        const pwd = document.getElementById('loginPassword').value;
+        login(email, pwd);
+    };
+    document.getElementById('registerBtn').onclick = registerDemo;
+    document.getElementById('logoutBtn').onclick = logout;
+    document.getElementById('sendRequestBtn').onclick = sendRequest;
+
+    renderEndpoints();
+    loadStoredAuth();
+</script>
+</body>
+</html>
