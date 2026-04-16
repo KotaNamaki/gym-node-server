@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/', authMiddleware, adminReq, getAllBookings);
 router.get('/my', authMiddleware, getMyBookings);
-router.get('/:id', authMiddleware, getBookingById);
+router.get('/:id', authMiddleware, getBookingById, adminReq);
 router.post('/', authMiddleware, createBooking);
 router.patch('/:id/status', authMiddleware, adminReq, updateBookingStatus);
 

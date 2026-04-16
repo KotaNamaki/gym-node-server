@@ -5,7 +5,7 @@ const validSessionStatuses = ['scheduled', 'ongoing', 'completed', 'cancelled'];
 
 // Helper untuk validasi trainer
 const isValidTrainer = async (db, trainer_id) => {
-    const [rows] = await db.query('SELECT id FROM user WHERE id = ? AND role = \'trainer\'', [trainer_id]);
+    const rows = await db.query('SELECT id FROM user WHERE id = ? AND role = \'trainer\'', [trainer_id]);
     return rows.length > 0;
 };
 
@@ -58,7 +58,7 @@ export const createSession = async (req, res) => {
             'INSERT INTO session (title, deskripsi, trainer_id, start_time, end_time, price, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [title, deskripsi, trainer_id, start_time, end_time, price, status]
         );
-        return success(res, {id: result.insertId}, 'Session created successfully', 201);
+        return success(res, {id: Number(result.insertId)}, 'Session created successfully', 201);
     } catch (err) {
         console.error('Create session error:', err);
         return error(res, 'Internal server error', 500);
@@ -68,6 +68,7 @@ export const createSession = async (req, res) => {
 export const updateSession = async (req, res) => {
     try {
         const { id } = req.params;
+        const dbCheck = await getDBPool();
         const allowedFields = ['title', 'deskripsi', 'trainer_id', 'start_time', 'end_time', 'price', 'status'];
         const fields = [];
         const values = [];
@@ -76,7 +77,6 @@ export const updateSession = async (req, res) => {
             if (req.body[field] !== undefined) {
                 // Validasi khusus untuk trainer_id dan status
                 if (field === 'trainer_id') {
-                    const dbCheck = await getDBPool();
                     if (!(await isValidTrainer(dbCheck, req.body.trainer_id))) {
                         return error(res, 'Invalid trainer_id or user is not a trainer', 400);
                     }
@@ -126,7 +126,7 @@ export const getUpcomingSessions = async (req, res) => {
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM upcoming_sessions_for_members');
-        return success(res, rows, 'Upcoming sessions fetched successfully');
+        return success(res, rows, {id: Number(result.insertId)}, 'Session created successfully', 201);
     } catch (err) {
         console.error('Fetch upcoming sessions error:', err);
         return error(res, 'Internal server error', 500);

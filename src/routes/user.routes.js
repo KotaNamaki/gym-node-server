@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post('/register', register);
 router.get('/:id', authMiddleware, getUserById);
-router.get('/email/:email', authMiddleware, getUserByEmail);
+router.get('/email/:email', authMiddleware, getUserByEmail, adminReq);
 router.delete('/:id', authMiddleware, adminReq, deleteUserId);
 
 

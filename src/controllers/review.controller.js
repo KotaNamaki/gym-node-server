@@ -4,7 +4,7 @@ import {success, error} from '../utils/response.js';
 export const getAllReviews = async (req, res) => {
     try {
         const db = await getDBPool();
-        const [rows] = await db.query('SELECT * FROM reviews');
+        const rows = await db.query('SELECT * FROM reviews');
         return success(res, rows, 'All reviews fetched successfully');
     } catch (err) {
         console.error('Fetch reviews error:', err);
@@ -16,7 +16,7 @@ export const getSessionReviews = async (req, res) => {
     try {
         const {session_id} = req.params;
         const db = await getDBPool();
-        const [rows] = await db.query('SELECT * FROM session_reviews_summary WHERE session_id = ?', [session_id]);
+        const rows = await db.query('SELECT * FROM session_reviews_summary WHERE session_id = ?', [session_id]);
         return success(res, rows, 'Session reviews fetched successfully');
     } catch (err) {
         console.error('Fetch session reviews error:', err);

@@ -11,6 +11,7 @@ import analyticsRoutes from './src/routes/analytics.routes.js'
 import progressRoutes from './src/routes/progress.routes.js'
 import reviewRoutes from './src/routes/review.routes.js'
 import errorMiddleware from './src/middleware/Error.Middleware.js'
+import {adminReq} from "./src/middleware/Role.Middleware.js";
 
 dotenv.config()
 getDBPool()
