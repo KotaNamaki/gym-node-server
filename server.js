@@ -1,5 +1,7 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import { rateLimit } from 'express-rate-limit'
 import dotenv from 'dotenv'
 import {getDBPool} from './src/config/db.js'
 
@@ -10,24 +12,36 @@ import bookingRoutes from './src/routes/booking.routes.js'
 import analyticsRoutes from './src/routes/analytics.routes.js'
 import progressRoutes from './src/routes/progress.routes.js'
 import reviewRoutes from './src/routes/review.routes.js'
+import viewsRoutes from './src/routes/views.routes.js'  // ADD THIS
 import errorMiddleware from './src/middleware/Error.Middleware.js'
-import {adminReq} from "./src/middleware/Role.Middleware.js";
 
 dotenv.config()
 getDBPool()
 
 const app = express()
 
+// Security Middleware
+app.use(helmet())
 app.use(cors())
 app.use(express.json())
 
-app.use('/api/auth', authRoutes)
+// Rate Limiting
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: 'Too many requests from this IP, please try again after 15 minutes'
+})
+
+app.use('/api/auth', authLimiter, authRoutes)
 app.use('/api/user', userRoutes)
 app.use('/api/sessions', classRoutes)
 app.use('/api/bookings', bookingRoutes)
 app.use('/api/analytics', analyticsRoutes)
 app.use('/api/progress', progressRoutes)
 app.use('/api/reviews', reviewRoutes)
+app.use('/api/views', viewsRoutes)  // ADD THIS - all view endpoints will be under /api/views
 
 app.use(errorMiddleware)
 

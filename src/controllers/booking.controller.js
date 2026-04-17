@@ -4,7 +4,7 @@ import {success, error} from '../utils/response.js';
 export const getAllBookings = async (req, res) => {
     try {
         const db = await getDBPool();
-        const [rows] = await db.query('SELECT * FROM booking');
+        const rows = await db.query('SELECT * FROM booking');
         return success(res, rows, 'Bookings fetched successfully');
     } catch (err) {
         console.error('Fetch bookings error:', err);
@@ -16,11 +16,18 @@ export const getBookingById = async (req, res) => {
     try {
         const {id} = req.params;
         const db = await getDBPool();
-        const [rows] = await db.query('SELECT * FROM booking WHERE id = ?', [id]);
+        const rows = await db.query('SELECT * FROM booking WHERE id = ?', [id]);
         if (rows.length === 0) {
             return error(res, 'Booking not found', 404);
         }
-        return success(res, rows[0], 'Booking fetched successfully');
+
+        const booking = rows[0];
+        // BOLA Fix: Only admin or the member who made the booking can access it
+        if (req.user.role !== 'admin' && req.user.id !== booking.member_id) {
+            return error(res, 'Forbidden: You can only access your own bookings', 403);
+        }
+
+        return success(res, booking, 'Booking fetched successfully');
     } catch (err) {
         console.error('Fetch booking error:', err);
         return error(res, 'Internal server error', 500);
@@ -75,14 +82,30 @@ export const updateBookingStatus = async (req, res) => {
         }
 
         const db = await getDBPool();
+
+        // BOLA and Role Check
+        const [rows] = await db.query('SELECT * FROM booking WHERE id = ?', [id]);
+        if (rows.length === 0) {
+            return error(res, 'Booking not found', 404);
+        }
+
+        const booking = rows[0];
+
+        if (req.user.role !== 'admin') {
+            // Non-admins (customers) can only cancel their OWN bookings
+            if (req.user.id !== booking.member_id) {
+                return error(res, 'Forbidden: You can only update your own bookings', 403);
+            }
+            if (status !== 'Cancel') {
+                return error(res, 'Forbidden: Only admin can confirm bookings', 403);
+            }
+        }
+
         const [result] = await db.query(
             'UPDATE booking SET status = ? WHERE id = ?',
             [status, id]
         );
 
-        if (result.affectedRows === 0) {
-            return error(res, 'Booking not found', 404);
-        }
         return success(res, null, 'Booking status updated successfully');
     } catch (err) {
         console.error('Update booking status error:', err);
@@ -94,7 +117,7 @@ export const getMyBookings = async (req, res) => {
     try {
         const member_id = req.user.id;
         const db = await getDBPool();
-        const [rows] = await db.query('SELECT * FROM customer_booking_history WHERE customer_id = ?', [member_id]);
+        const rows = await db.query('SELECT * FROM customer_booking_history WHERE customer_id = ?', [member_id]);
         return success(res, rows, 'My bookings fetched successfully');
     } catch (err) {
         console.error('Fetch my bookings error:', err);

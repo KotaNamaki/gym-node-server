@@ -85,6 +85,7 @@
         .method-POST { background: #ffc107; color: black; }
         .method-PUT { background: #17a2b8; color: white; }
         .method-DELETE { background: #dc3545; color: white; }
+        .method-PATCH { background: #6f42c1; color: white; }
         input, textarea, select {
             width: 100%;
             padding: 8px;
@@ -162,38 +163,64 @@
     let currentUser = null;
 
     const endpoints = [
+        // Auth
+        { group: "Auth", name: "Get Current Profile (Me)", method: "GET", path: "/auth/me", needAuth: true },
+        { group: "Auth", name: "Admin Register User", method: "POST", path: "/auth/admin/register", bodyExample: { nama: "Admin New User", email: "admincreated@test.com", password: "123", role: "trainer", propinsi: "Jakarta", kota: "Jaksel" }, needAuth: true, roles: ["admin"] },
         { group: "Auth", name: "Login", method: "POST", path: "/auth/login", bodyExample: { email: "customer@test.com", password: "123456" }, needAuth: false },
         { group: "Auth", name: "Register", method: "POST", path: "/auth/register", bodyExample: { nama: "Test User", email: "newuser@test.com", password: "123456", role: "customer", propinsi: "DKI Jakarta", kota: "Jakarta Selatan" }, needAuth: false },
+
+        // User
+        { group: "User", name: "Get All Users (Admin)", method: "GET", path: "/user", needAuth: true, roles: ["admin"] },
         { group: "User", name: "Get User by ID", method: "GET", path: "/user/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
-        { group: "User", name: "Get User by Email", method: "GET", path: "/user/email/:email", pathParams: [{ name: "email", value: "customer@test.com" }], needAuth: true },
+        { group: "User", name: "Get User by Email (Admin)", method: "GET", path: "/user/email/:email", pathParams: [{ name: "email", value: "customer@test.com" }], needAuth: true, roles: ["admin"] },
         { group: "User", name: "Delete User (Admin)", method: "DELETE", path: "/user/:id", pathParams: [{ name: "id", value: "2" }], needAuth: true, roles: ["admin"] },
         { group: "User", name: "Register via User Controller", method: "POST", path: "/user/register", bodyExample: { nama: "Another", email: "another@test.com", password: "123", role: "customer", propinsi: "Jabar", kota: "Bandung" }, needAuth: false },
-        { group: "Session", name: "Get All Sessions", method: "GET", path: "/sessions", needAuth: true },
-        { group: "Session", name: "Get Session by ID", method: "GET", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
-        { group: "Session", name: "Create Session", method: "POST", path: "/sessions", bodyExample: { title: "Yoga Pagi", deskripsi: "Relaxing yoga", trainer_id: 1, start_time: "2026-05-01 08:00:00", end_time: "2026-05-01 09:00:00", price: 50000, status: "scheduled" }, needAuth: true, roles: ["trainer","admin"] },
-        { group: "Session", name: "Update Session", method: "PUT", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], bodyExample: { title: "Yoga Updated", price: 60000 }, needAuth: true, roles: ["trainer","admin"] },
-        { group: "Session", name: "Delete Session", method: "DELETE", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["admin"] },
-        { group: "Session", name: "Upcoming Sessions", method: "GET", path: "/sessions/upcoming", needAuth: true },
-        { group: "Booking", name: "Get All Bookings", method: "GET", path: "/bookings", needAuth: true, roles: ["admin"] },
-        { group: "Booking", name: "Get Booking by ID", method: "GET", path: "/bookings/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
-        { group: "Booking", name: "Create Booking", method: "POST", path: "/bookings", bodyExample: { session_id: 1, status: "Pending" }, needAuth: true, roles: ["customer"] },
-        { group: "Booking", name: "Update Booking Status", method: "PUT", path: "/bookings/:id/status", pathParams: [{ name: "id", value: "1" }], bodyExample: { status: "Confirmed" }, needAuth: true, roles: ["trainer","admin"] },
-        { group: "Booking", name: "My Bookings", method: "GET", path: "/bookings/my", needAuth: true, roles: ["customer"] },
-        { group: "Progress", name: "Get All Progress", method: "GET", path: "/progress", needAuth: true, roles: ["admin"] },
-        { group: "Progress", name: "My Progress", method: "GET", path: "/progress/my", needAuth: true, roles: ["customer"] },
-        { group: "Progress", name: "Create Progress", method: "POST", path: "/progress", bodyExample: { booking_id: 1, activity: "Lari", duration: 30, note: "Terasa ringan" }, needAuth: true, roles: ["customer"] },
-        { group: "Progress", name: "Delete Progress", method: "DELETE", path: "/progress/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["customer","admin"] },
-        { group: "Review", name: "Get All Reviews", method: "GET", path: "/reviews", needAuth: true },
-        { group: "Review", name: "Get Reviews by Session", method: "GET", path: "/reviews/session/:session_id", pathParams: [{ name: "session_id", value: "1" }], needAuth: true },
-        { group: "Review", name: "Create Review", method: "POST", path: "/reviews", bodyExample: { session_id: 1, rating_score: 5, comment: "Great session!" }, needAuth: true, roles: ["customer"] },
-        { group: "Review", name: "Delete Review", method: "DELETE", path: "/reviews/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["customer","admin"] },
-        { group: "Analytics", name: "User Stats", method: "GET", path: "/analytics/users", needAuth: true, roles: ["admin"] },
-        { group: "Analytics", name: "Booking Stats", method: "GET", path: "/analytics/bookings", needAuth: true, roles: ["admin"] },
-        { group: "Analytics", name: "Session Stats", method: "GET", path: "/analytics/sessions", needAuth: true, roles: ["admin"] },
-        { group: "Views", name: "Matched Trainer Customer", method: "GET", path: "/views/matched-trainer-customer", needAuth: true },
-        { group: "Views", name: "Session Participants", method: "GET", path: "/views/session-participants", needAuth: true },
-        { group: "Views", name: "Trainer Schedule", method: "GET", path: "/views/trainer-schedule", needAuth: true },
-        { group: "Views", name: "Customer Booking History", method: "GET", path: "/views/customer-booking-history", needAuth: true },
+
+        // Session
+        { group: "Session", name: "Get All Sessions", method: "GET", path: "/sessions", needAuth: false },
+        { group: "Session", name: "Get Session by ID", method: "GET", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], needAuth: false },
+        { group: "Session", name: "Upcoming Sessions", method: "GET", path: "/sessions/upcoming", needAuth: false },
+        { group: "Session", name: "Create Session (Trainer)", method: "POST", path: "/sessions", bodyExample: { title: "Yoga Pagi", deskripsi: "Relaxing yoga", trainer_id: 1, start_time: "2026-05-01 08:00:00", end_time: "2026-05-01 09:00:00", price: 50000, status: "scheduled" }, needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Session", name: "Update Session (Trainer)", method: "PUT", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], bodyExample: { title: "Yoga Updated", price: 60000 }, needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Session", name: "Delete Session (Trainer)", method: "DELETE", path: "/sessions/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["trainer", "admin"] },
+
+        // Booking
+        { group: "Booking", name: "Get All Bookings (Admin)", method: "GET", path: "/bookings", needAuth: true, roles: ["admin"] },
+        { group: "Booking", name: "My Bookings (Customer)", method: "GET", path: "/bookings/my", needAuth: true, roles: ["customer"] },
+        { group: "Booking", name: "Get Booking by ID (Admin)", method: "GET", path: "/bookings/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["admin"] },
+        { group: "Booking", name: "Create Booking (Customer)", method: "POST", path: "/bookings", bodyExample: { session_id: 1, status: "Pending" }, needAuth: true, roles: ["customer"] },
+        { group: "Booking", name: "Update Booking Status (Admin)", method: "PATCH", path: "/bookings/:id/status", pathParams: [{ name: "id", value: "1" }], bodyExample: { status: "Confirmed" }, needAuth: true, roles: ["admin"] },
+
+        // Progress
+        { group: "Progress", name: "Get All Progress (Admin)", method: "GET", path: "/progress", needAuth: true, roles: ["admin"] },
+        { group: "Progress", name: "My Progress (Customer)", method: "GET", path: "/progress/my", needAuth: true, roles: ["customer"] },
+        { group: "Progress", name: "Create Progress (Customer)", method: "POST", path: "/progress", bodyExample: { booking_id: 1, activity: "Lari", duration: 30, note: "Terasa ringan" }, needAuth: true, roles: ["customer"] },
+        { group: "Progress", name: "Delete Progress (Admin)", method: "DELETE", path: "/progress/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["admin"] },
+
+        // Review
+        { group: "Review", name: "Get All Reviews (Admin)", method: "GET", path: "/reviews", needAuth: true, roles: ["admin"] },
+        { group: "Review", name: "Get Reviews by Session", method: "GET", path: "/reviews/session/:session_id", pathParams: [{ name: "session_id", value: "1" }], needAuth: false },
+        { group: "Review", name: "Create Review (Customer)", method: "POST", path: "/reviews", bodyExample: { session_id: 1, rating_score: 5, comment: "Great session!" }, needAuth: true, roles: ["customer"] },
+        { group: "Review", name: "Delete Review (Admin)", method: "DELETE", path: "/reviews/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["admin"] },
+
+        // Analytics
+        { group: "Analytics", name: "User Stats (Admin)", method: "GET", path: "/analytics/users", needAuth: true, roles: ["admin"] },
+        { group: "Analytics", name: "Booking Stats (Admin)", method: "GET", path: "/analytics/bookings", needAuth: true, roles: ["admin"] },
+        { group: "Analytics", name: "Session Stats (Admin)", method: "GET", path: "/analytics/sessions", needAuth: true, roles: ["admin"] },
+
+        // Views
+        { group: "Views", name: "Matched Trainer-Customer (Trainer/Admin)", method: "GET", path: "/views/matched-trainer-customer", needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Views", name: "Progress Summary (Trainer/Admin)", method: "GET", path: "/views/progress-summary", needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Views", name: "My Progress Summary (Customer)", method: "GET", path: "/views/progress-summary/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "Views", name: "Session Participants (Trainer/Admin)", method: "GET", path: "/views/session-participants", needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Views", name: "Session Participants by Session ID (Trainer/Admin)", method: "GET", path: "/views/session-participants/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Views", name: "Session Reviews Summary", method: "GET", path: "/views/session-reviews", needAuth: true },
+        { group: "Views", name: "Session Reviews Summary by ID", method: "GET", path: "/views/session-reviews/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "Views", name: "Trainer Schedule (Trainer/Admin)", method: "GET", path: "/views/trainer-schedule", needAuth: true, roles: ["trainer", "admin"] },
+        { group: "Views", name: "Specific Trainer Schedule", method: "GET", path: "/views/trainer-schedule/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "Views", name: "Customer Booking History (Admin)", method: "GET", path: "/views/customer-booking-history", needAuth: true, roles: ["admin"] },
+        { group: "Views", name: "My Booking History (Customer)", method: "GET", path: "/views/customer-booking-history/:id", pathParams: [{ name: "id", value: "1" }], needAuth: true },
+        { group: "Views", name: "Upcoming Sessions (All Auth)", method: "GET", path: "/views/upcoming-sessions", needAuth: true },
     ];
 
     function renderEndpoints() {
@@ -212,7 +239,11 @@
                 const item = document.createElement('div');
                 item.className = 'api-item';
                 item.innerHTML = `<span class="method-${ep.method} method-badge">${ep.method}</span> ${ep.name}`;
-                item.onclick = () => selectEndpoint(ep);
+                item.onclick = (e) => {
+                    document.querySelectorAll('.api-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    selectEndpoint(ep);
+                };
                 container.appendChild(item);
             });
         }
@@ -233,7 +264,7 @@
         if (ep.bodyExample) {
             html += `<div><strong>Body (JSON):</strong></div>`;
             html += `<textarea id="requestBody">${JSON.stringify(ep.bodyExample, null, 2)}</textarea>`;
-        } else if (ep.method !== 'GET') {
+        } else if (ep.method !== 'GET' && ep.method !== 'DELETE') {
             html += `<div><strong>Body (JSON):</strong></div>`;
             html += `<textarea id="requestBody" placeholder='{"key":"value"}'></textarea>`;
         }
@@ -277,8 +308,11 @@
 
         const options = {
             method: method,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Accept': 'application/json' }
         };
+        if (method !== 'GET' && method !== 'HEAD') {
+            options.headers['Content-Type'] = 'application/json';
+        }
         if (authToken) {
             options.headers['Authorization'] = `Bearer ${authToken}`;
         }
@@ -339,6 +373,20 @@
                 document.getElementById('registerBtn').style.display = 'none';
                 document.getElementById('logoutBtn').style.display = 'inline-block';
                 alert(`Login sukses sebagai ${currentUser.nama} (${currentUser.role})`);
+
+                // Auto update ID in some endpoints if it makes sense
+                if (currentUser.id) {
+                    endpoints.forEach(ep => {
+                        if (ep.pathParams) {
+                            ep.pathParams.forEach(p => {
+                                if (p.name === 'id' && ep.group !== 'User' && ep.group !== 'Booking') {
+                                    // Just a heuristic
+                                }
+                            });
+                        }
+                    });
+                }
+
                 renderEndpoints();
             } else {
                 alert('Login gagal: ' + (result.message || 'Unknown error'));

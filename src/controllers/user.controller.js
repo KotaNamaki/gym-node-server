@@ -1,8 +1,25 @@
 import {getDBPool} from '../config/db.js';
 
+export const getAllUsers = async (req, res) => {
+    try {
+        const db = await getDBPool();
+        const rows = await db.query('SELECT id, nama, email, role FROM user');
+        res.json(rows);
+    } catch (error) {
+        console.error('Failed to get all users:', error);
+        res.status(500).json({ message: 'Error fetching users.' });
+    }
+}
+
 export const getUserById = async (req, res) => {
     try {
         const {id} = req.params;
+        
+        // BOLA Fix: Only admin or the user themselves can access this
+        if (req.user.role !== 'admin' && req.user.id !== parseInt(id)) {
+            return res.status(403).json({ message: 'Forbidden: You can only access your own profile' });
+        }
+
         const db = await getDBPool();
         const rows = await db.query('SELECT id, nama, email, role FROM user WHERE id = ?', [id]);
         if (rows.length === 0) {

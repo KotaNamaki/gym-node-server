@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 15, 2026 at 10:56 AM
+-- Generation Time: Apr 17, 2026 at 03:01 PM
 -- Server version: 11.4.9-MariaDB-cll-lve
 -- PHP Version: 8.1.34
 
@@ -20,6 +20,8 @@ SET time_zone = "+00:00";
 --
 -- Database: `gymbuddy_database_1`
 --
+CREATE DATABASE IF NOT EXISTS `gymbuddy_database_1` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `gymbuddy_database_1`;
 
 -- --------------------------------------------------------
 
@@ -49,7 +51,7 @@ CREATE TABLE `customer_booking_history` (
 ,`start_time` datetime
 ,`end_time` datetime
 ,`trainer_name` varchar(100)
-,`status` enum('Pending','Confirmed','Cancel') DEFAULT 'Pending'
+,`status` enum('Pending','Confirmed','Cancel')
 ,`booked_on` datetime
 );
 
@@ -70,7 +72,7 @@ CREATE TABLE `matched_trainer_customer` (
 ,`customer_id` int(11)
 ,`customer_name` varchar(100)
 ,`customer_email` varchar(100)
-,`status` enum('Pending','Confirmed','Cancel') DEFAULT 'Confirmed'
+,`status` enum('Pending','Confirmed','Cancel')
 ,`datetime_created` datetime
 );
 
@@ -138,6 +140,14 @@ CREATE TABLE `session` (
   `status` enum('scheduled','ongoing','completed','cancelled') NOT NULL DEFAULT 'scheduled',
   `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `session`
+--
+
+INSERT INTO `session` (`id`, `title`, `deskripsi`, `trainer_id`, `start_time`, `end_time`, `price`, `status`, `updated_at`) VALUES
+(1, 'Yoga Updated', 'Relaxing yoga', 5, '2026-05-01 08:00:00', '2026-05-01 09:00:00', 50000.00, 'completed', '2026-04-16 16:53:04'),
+(2, 'Yoga Updated', 'Relaxing yoga', 5, '2026-05-01 08:00:00', '2026-05-01 09:00:00', 50000.00, 'completed', '2026-04-16 16:53:25');
 
 -- --------------------------------------------------------
 
@@ -222,6 +232,16 @@ CREATE TABLE `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
+-- Dumping data for table `user`
+--
+
+INSERT INTO `user` (`id`, `nama`, `email`, `password`, `role`, `propinsi`, `kota`, `created_at`) VALUES
+(1, 'Demo Customer', 'customer@test.com', '$2b$10$4XOOLQ0hYh4isdBx4nfOJeORsteHQvnkczZ/LEZp8XoneBfkmelpC', 'customer', 'DKI Jakarta', 'Jakarta Pusat', '2026-04-15 13:10:38'),
+(2, 'Test User', 'newuser@test.com', '$2b$10$4w2yxvzzokb7pYfRuD84XuDHoALIyx5mvoHG2wq3uQoiEeEidXMLy', 'customer', 'DKI Jakarta', 'Jakarta Selatan', '2026-04-15 13:11:34'),
+(3, 'Andhika', 'dika@mail.com', '$2b$10$VkOpzK3zDPYkut.C9SrPQOiZhamQb9KXBoGY0FZ9Jnt8qStx7IAy.', 'admin', 'Jawa Tengah', 'Purbalingga', '2026-04-15 13:15:57'),
+(5, 'Trainer', 'trainer@test.com', '$2b$10$N.To6/M2ad8gqdPNo.dz8eoTOPB12WZfmFjCWsqeZ5aZ9krIZm3o.', 'trainer', 'Jawa Tengah', 'Banyumas', '2026-04-16 15:36:59');
+
+--
 -- Indexes for dumped tables
 --
 
@@ -293,13 +313,13 @@ ALTER TABLE `reviews`
 -- AUTO_INCREMENT for table `session`
 --
 ALTER TABLE `session`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 -- --------------------------------------------------------
 
@@ -308,7 +328,7 @@ ALTER TABLE `user`
 --
 DROP TABLE IF EXISTS `customer_booking_history`;
 
-CREATE VIEW `customer_booking_history` AS SELECT `customer`.`id` AS `customer_id`, `customer`.`nama` AS `customer_name`, `b`.`id` AS `booking_id`, `s`.`title` AS `session_title`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, `trainer`.`nama` AS `trainer_name`, `b`.`status` AS `status`, `b`.`datetime_created` AS `booked_on` FROM (((`booking` `b` join `session` `s` on(`b`.`session_id` = `s`.`id`)) join `user` `customer` on(`b`.`member_id` = `customer`.`id`)) join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) WHERE `customer`.`role` = 'customer' ORDER BY `customer`.`id` ASC, `s`.`start_time` DESC ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `customer_booking_history`  AS SELECT `customer`.`id` AS `customer_id`, `customer`.`nama` AS `customer_name`, `b`.`id` AS `booking_id`, `s`.`title` AS `session_title`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, `trainer`.`nama` AS `trainer_name`, `b`.`status` AS `status`, `b`.`datetime_created` AS `booked_on` FROM (((`booking` `b` join `session` `s` on(`b`.`session_id` = `s`.`id`)) join `user` `customer` on(`b`.`member_id` = `customer`.`id`)) join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) WHERE `customer`.`role` = 'customer' ORDER BY `customer`.`id` ASC, `s`.`start_time` DESC ;
 
 -- --------------------------------------------------------
 
@@ -317,7 +337,7 @@ CREATE VIEW `customer_booking_history` AS SELECT `customer`.`id` AS `customer_id
 --
 DROP TABLE IF EXISTS `matched_trainer_customer`;
 
-CREATE VIEW `matched_trainer_customer` AS SELECT `b`.`id` AS `booking_id`, `s`.`id` AS `session_id`, `s`.`title` AS `session_title`, `s`.`start_time` AS `start_time`, `trainer`.`id` AS `trainer_id`, `trainer`.`nama` AS `trainer_name`, `trainer`.`email` AS `trainer_email`, `customer`.`id` AS `customer_id`, `customer`.`nama` AS `customer_name`, `customer`.`email` AS `customer_email`, `b`.`status` AS `status`, `b`.`datetime_created` AS `datetime_created` FROM (((`booking` `b` join `session` `s` on(`b`.`session_id` = `s`.`id`)) join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) join `user` `customer` on(`b`.`member_id` = `customer`.`id`)) WHERE `b`.`status` = 'Confirmed' ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `matched_trainer_customer`  AS SELECT `b`.`id` AS `booking_id`, `s`.`id` AS `session_id`, `s`.`title` AS `session_title`, `s`.`start_time` AS `start_time`, `trainer`.`id` AS `trainer_id`, `trainer`.`nama` AS `trainer_name`, `trainer`.`email` AS `trainer_email`, `customer`.`id` AS `customer_id`, `customer`.`nama` AS `customer_name`, `customer`.`email` AS `customer_email`, `b`.`status` AS `status`, `b`.`datetime_created` AS `datetime_created` FROM (((`booking` `b` join `session` `s` on(`b`.`session_id` = `s`.`id`)) join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) join `user` `customer` on(`b`.`member_id` = `customer`.`id`)) WHERE `b`.`status` = 'Confirmed' ;
 
 -- --------------------------------------------------------
 
@@ -326,7 +346,7 @@ CREATE VIEW `matched_trainer_customer` AS SELECT `b`.`id` AS `booking_id`, `s`.`
 --
 DROP TABLE IF EXISTS `member_progress_summary`;
 
-CREATE VIEW `member_progress_summary` AS SELECT `p`.`id` AS `progress_id`, `u`.`id` AS `member_id`, `u`.`nama` AS `member_name`, `p`.`activity` AS `activity`, `p`.`duration` AS `duration`, `p`.`note` AS `note`, `p`.`jam_nyatat` AS `recorded_at` FROM (`progress` `p` join `user` `u` on(`p`.`member_id` = `u`.`id`)) WHERE `u`.`role` = 'customer' ORDER BY `p`.`jam_nyatat` DESC ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `member_progress_summary`  AS SELECT `p`.`id` AS `progress_id`, `u`.`id` AS `member_id`, `u`.`nama` AS `member_name`, `p`.`activity` AS `activity`, `p`.`duration` AS `duration`, `p`.`note` AS `note`, `p`.`jam_nyatat` AS `recorded_at` FROM (`progress` `p` join `user` `u` on(`p`.`member_id` = `u`.`id`)) WHERE `u`.`role` = 'customer' ORDER BY `p`.`jam_nyatat` DESC ;
 
 -- --------------------------------------------------------
 
@@ -335,7 +355,7 @@ CREATE VIEW `member_progress_summary` AS SELECT `p`.`id` AS `progress_id`, `u`.`
 --
 DROP TABLE IF EXISTS `session_participants`;
 
-CREATE VIEW `session_participants` AS SELECT `s`.`id` AS `session_id`, `s`.`title` AS `title`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, `s`.`price` AS `price`, `trainer`.`nama` AS `trainer_name`, count(`b`.`id`) AS `confirmed_participants` FROM ((`session` `s` join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) left join `booking` `b` on(`b`.`session_id` = `s`.`id` and `b`.`status` = 'Confirmed')) GROUP BY `s`.`id`, `s`.`title`, `s`.`start_time`, `s`.`end_time`, `s`.`price`, `trainer`.`nama` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `session_participants`  AS SELECT `s`.`id` AS `session_id`, `s`.`title` AS `title`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, `s`.`price` AS `price`, `trainer`.`nama` AS `trainer_name`, count(`b`.`id`) AS `confirmed_participants` FROM ((`session` `s` join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) left join `booking` `b` on(`b`.`session_id` = `s`.`id` and `b`.`status` = 'Confirmed')) GROUP BY `s`.`id`, `s`.`title`, `s`.`start_time`, `s`.`end_time`, `s`.`price`, `trainer`.`nama` ;
 
 -- --------------------------------------------------------
 
@@ -344,7 +364,7 @@ CREATE VIEW `session_participants` AS SELECT `s`.`id` AS `session_id`, `s`.`titl
 --
 DROP TABLE IF EXISTS `session_reviews_summary`;
 
-CREATE VIEW `session_reviews_summary` AS SELECT `r`.`id` AS `review_id`, `s`.`id` AS `session_id`, `s`.`title` AS `session_title`, `trainer`.`nama` AS `trainer_name`, `customer`.`nama` AS `customer_name`, `r`.`rating_score` AS `rating_score`, `r`.`comment` AS `comment` FROM (((`reviews` `r` join `session` `s` on(`r`.`session_id` = `s`.`id`)) join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) join `user` `customer` on(`r`.`member_id` = `customer`.`id`)) ORDER BY `r`.`id` DESC ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `session_reviews_summary`  AS SELECT `r`.`id` AS `review_id`, `s`.`id` AS `session_id`, `s`.`title` AS `session_title`, `trainer`.`nama` AS `trainer_name`, `customer`.`nama` AS `customer_name`, `r`.`rating_score` AS `rating_score`, `r`.`comment` AS `comment` FROM (((`reviews` `r` join `session` `s` on(`r`.`session_id` = `s`.`id`)) join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) join `user` `customer` on(`r`.`member_id` = `customer`.`id`)) ORDER BY `r`.`id` DESC ;
 
 -- --------------------------------------------------------
 
@@ -353,7 +373,7 @@ CREATE VIEW `session_reviews_summary` AS SELECT `r`.`id` AS `review_id`, `s`.`id
 --
 DROP TABLE IF EXISTS `trainer_schedule`;
 
-CREATE VIEW `trainer_schedule` AS SELECT `trainer`.`id` AS `trainer_id`, `trainer`.`nama` AS `trainer_name`, `s`.`id` AS `session_id`, `s`.`title` AS `title`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, count(`b`.`id`) AS `confirmed_customers` FROM ((`user` `trainer` join `session` `s` on(`trainer`.`id` = `s`.`trainer_id`)) left join `booking` `b` on(`b`.`session_id` = `s`.`id` and `b`.`status` = 'Confirmed')) WHERE `trainer`.`role` = 'trainer' AND `s`.`start_time` > current_timestamp() GROUP BY `trainer`.`id`, `trainer`.`nama`, `s`.`id`, `s`.`title`, `s`.`start_time`, `s`.`end_time` ORDER BY `trainer`.`nama` ASC, `s`.`start_time` ASC ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `trainer_schedule`  AS SELECT `trainer`.`id` AS `trainer_id`, `trainer`.`nama` AS `trainer_name`, `s`.`id` AS `session_id`, `s`.`title` AS `title`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, count(`b`.`id`) AS `confirmed_customers` FROM ((`user` `trainer` join `session` `s` on(`trainer`.`id` = `s`.`trainer_id`)) left join `booking` `b` on(`b`.`session_id` = `s`.`id` and `b`.`status` = 'Confirmed')) WHERE `trainer`.`role` = 'trainer' AND `s`.`start_time` > current_timestamp() GROUP BY `trainer`.`id`, `trainer`.`nama`, `s`.`id`, `s`.`title`, `s`.`start_time`, `s`.`end_time` ORDER BY `trainer`.`nama` ASC, `s`.`start_time` ASC ;
 
 -- --------------------------------------------------------
 
@@ -362,7 +382,7 @@ CREATE VIEW `trainer_schedule` AS SELECT `trainer`.`id` AS `trainer_id`, `traine
 --
 DROP TABLE IF EXISTS `upcoming_sessions_for_members`;
 
-CREATE VIEW `upcoming_sessions_for_members` AS SELECT `s`.`id` AS `session_id`, `s`.`title` AS `title`, `s`.`deskripsi` AS `deskripsi`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, `s`.`price` AS `price`, `trainer`.`nama` AS `trainer_name`, count(`b`.`id`) AS `confirmed_bookings` FROM ((`session` `s` join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) left join `booking` `b` on(`b`.`session_id` = `s`.`id` and `b`.`status` = 'Confirmed')) WHERE `s`.`start_time` > current_timestamp() GROUP BY `s`.`id`, `s`.`title`, `s`.`deskripsi`, `s`.`start_time`, `s`.`end_time`, `s`.`price`, `trainer`.`nama` ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`gymbuddy_user_1`@`localhost` SQL SECURITY DEFINER VIEW `upcoming_sessions_for_members`  AS SELECT `s`.`id` AS `session_id`, `s`.`title` AS `title`, `s`.`deskripsi` AS `deskripsi`, `s`.`start_time` AS `start_time`, `s`.`end_time` AS `end_time`, `s`.`price` AS `price`, `trainer`.`nama` AS `trainer_name`, count(`b`.`id`) AS `confirmed_bookings` FROM ((`session` `s` join `user` `trainer` on(`s`.`trainer_id` = `trainer`.`id`)) left join `booking` `b` on(`b`.`session_id` = `s`.`id` and `b`.`status` = 'Confirmed')) WHERE `s`.`start_time` > current_timestamp() GROUP BY `s`.`id`, `s`.`title`, `s`.`deskripsi`, `s`.`start_time`, `s`.`end_time`, `s`.`price`, `trainer`.`nama` ;
 
 --
 -- Constraints for dumped tables
