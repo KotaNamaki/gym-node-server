@@ -32,15 +32,29 @@ app.use(cors({
 }))
 app.use((req, res, next) => {
     console.log(`[Middleware] Global: ${req.method} ${req.url}`);
-    if ((req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') && !req.headers['content-type']) {
-        req.headers['content-type'] = 'application/json';
+    
+    // Normalize Content-Type to application/json if it looks like it's meant to be JSON
+    // or if it's missing for POST/PUT/PATCH.
+    // Some proxies/clients might send variations like application/json;charset=UTF-8
+    const contentType = req.headers['content-type'];
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+        if (!contentType || contentType.includes('application/json') || contentType.includes('text/plain')) {
+            req.headers['content-type'] = 'application/json';
+        }
     }
-    // Also explicitly allow all content types to be handled by express.json() if they are application/json-like
-    // and bypass strict type checking if possible
+    
+    // Explicitly set Accept header if missing to help some proxies
+    if (!req.headers['accept']) {
+        req.headers['accept'] = 'application/json, text/plain, */*';
+    }
+    
     next();
 })
 
-app.use(express.json({ type: '*/*' }))
+app.use(express.json({ 
+    type: ['application/json', 'text/plain', '*/*'],
+    limit: '50mb' 
+}))
 app.use(express.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {
