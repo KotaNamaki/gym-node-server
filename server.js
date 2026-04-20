@@ -3,7 +3,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import { rateLimit } from 'express-rate-limit'
 import dotenv from 'dotenv'
-import {getDBPool} from './src/config/db.js'
+import {connectDB, getDBPool} from './src/config/db.js'
 
 import authRoutes from './src/routes/auth.routes.js'
 import userRoutes from './src/routes/user.routes.js'
@@ -42,8 +42,10 @@ app.use('/api/analytics', analyticsRoutes)
 app.use('/api/progress', progressRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/views', viewsRoutes)  // ADD THIS - all view endpoints will be under /api/views
-
 app.use(errorMiddleware)
+
+connectDB();
+
 
 const PORT = process.env.PORT || 3000
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

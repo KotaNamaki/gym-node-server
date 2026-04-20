@@ -12,6 +12,21 @@ const pool = mariadb.createPool({
     connectionLimit: 10
 });
 
+const dbCheck = async () => {
+    try {
+        const connection = await pool.getConnection();
+        await connection.query('SELECT 1');
+        connection.release();
+        console.log('Database connected successfully');
+    } catch (error) {
+        console.error('Database connection failed:', error);
+        process.exit(1);
+    }
+}
+
+export const connectDB = () => dbCheck();
+
 export const getDBPool = () => pool;
 
 export default pool;
+export default connectDB();
