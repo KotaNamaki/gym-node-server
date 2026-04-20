@@ -21,8 +21,15 @@ getDBPool()
 const app = express()
 
 // Security Middleware
-app.use(helmet())
-app.use(cors())
+app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+}))
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}))
 app.use(express.json())
 
 // Rate Limiting

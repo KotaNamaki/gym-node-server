@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/', authMiddleware, adminReq, getAllUsers);
 router.post('/register', register);
 router.get('/:id', authMiddleware, getUserById);
-router.get('/email/:email', authMiddleware, getUserByEmail, adminReq);
+router.get('/email/:email', authMiddleware, adminReq, getUserByEmail);
 router.delete('/:id', authMiddleware, adminReq, deleteUserId);
 
 
