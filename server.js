@@ -36,6 +36,7 @@ app.use((req, res, next) => {
     // Normalize Content-Type to application/json if it looks like it's meant to be JSON
     // or if it's missing for POST/PUT/PATCH.
     // Some proxies/clients might send variations like application/json;charset=UTF-8
+    // We normalize it to what the parser expects.
     const contentType = req.headers['content-type'];
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
         if (!contentType || contentType.includes('application/json') || contentType.includes('text/plain')) {
@@ -44,18 +45,18 @@ app.use((req, res, next) => {
     }
     
     // Explicitly set Accept header if missing to help some proxies
-    if (!req.headers['accept']) {
-        req.headers['accept'] = 'application/json, text/plain, */*';
+    if (!req.headers['accept'] || req.headers['accept'] === '*/*') {
+        req.headers['accept'] = 'application/json';
     }
     
     next();
 })
 
 app.use(express.json({ 
-    type: ['application/json', 'text/plain', '*/*'],
+    type: ['application/json', 'text/plain', 'text/json', '*/*'],
     limit: '50mb' 
 }))
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
 app.use((req, res, next) => {
     console.log(`[Middleware] Body Parsed: ${JSON.stringify(req.body)}`);
