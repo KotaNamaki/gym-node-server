@@ -29,4 +29,3 @@ export const connectDB = () => dbCheck();
 export const getDBPool = () => pool;
 
 export default pool;
-export default connectDB();
