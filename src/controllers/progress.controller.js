@@ -2,6 +2,7 @@ import {getDBPool} from '../config/db.js';
 import {success, error} from '../utils/response.js';
 
 export const getAllProgress = async (req, res) => {
+    console.log('[Controller] getAllProgress called');
     try {
         const db = await getDBPool();
         const [rows] = await db.query('SELECT * FROM progress');
@@ -13,6 +14,7 @@ export const getAllProgress = async (req, res) => {
 };
 
 export const getMyProgress = async (req, res) => {
+    console.log('[Controller] getMyProgress called');
     try {
         const member_id = req.user.id;
         const db = await getDBPool();
@@ -25,6 +27,7 @@ export const getMyProgress = async (req, res) => {
 };
 
 export const createProgress = async (req, res) => {
+    console.log('[Controller] createProgress called', req.body);
     try {
         const { booking_id, activity, duration, note } = req.body;
         const member_id = req.user.id;
@@ -58,6 +61,7 @@ export const createProgress = async (req, res) => {
 };
 
 export const deleteProgress = async (req, res) => {
+    console.log('[Controller] deleteProgress called', req.params.id);
     try {
         const { id } = req.params;
         const db = await getDBPool();

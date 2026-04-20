@@ -1,6 +1,7 @@
 import {getDBPool} from '../config/db.js';
 
 export const getAllUsers = async (req, res) => {
+    console.log('[Controller] getAllUsers called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT id, nama, email, role FROM user');
@@ -12,6 +13,7 @@ export const getAllUsers = async (req, res) => {
 }
 
 export const getUserById = async (req, res) => {
+    console.log('[Controller] getUserById called', req.params.id);
     try {
         const {id} = req.params;
         
@@ -34,6 +36,7 @@ export const getUserById = async (req, res) => {
 }
 
 export const getUserByEmail = async (req, res) => {
+    console.log('[Controller] getUserByEmail called', req.params.email);
     try {
         const {email} = req.params;
         const db = await getDBPool();
@@ -49,6 +52,7 @@ export const getUserByEmail = async (req, res) => {
 }
 
 export const deleteUserId = async (req, res) => {
+    console.log('[Controller] deleteUserId called', req.params.id);
     try {
         const {id} = req.params;
         const loggedInUserRole = req.user.role;

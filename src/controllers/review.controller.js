@@ -2,6 +2,7 @@ import {getDBPool} from '../config/db.js';
 import {success, error} from '../utils/response.js';
 
 export const getAllReviews = async (req, res) => {
+    console.log('[Controller] getAllReviews called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM reviews');
@@ -13,6 +14,7 @@ export const getAllReviews = async (req, res) => {
 };
 
 export const getSessionReviews = async (req, res) => {
+    console.log('[Controller] getSessionReviews called', req.params.session_id);
     try {
         const {session_id} = req.params;
         const db = await getDBPool();
@@ -25,6 +27,7 @@ export const getSessionReviews = async (req, res) => {
 };
 
 export const createReview = async (req, res) => {
+    console.log('[Controller] createReview called', req.body);
     try {
         const {session_id, rating_score, comment} = req.body;
         const member_id = req.user.id;
@@ -70,6 +73,7 @@ export const createReview = async (req, res) => {
 };
 
 export const deleteReview = async (req, res) => {
+    console.log('[Controller] deleteReview called', req.params.id);
     try {
         const {id} = req.params;
         const db = await getDBPool();

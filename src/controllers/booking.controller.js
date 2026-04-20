@@ -2,6 +2,7 @@ import {getDBPool} from '../config/db.js';
 import {success, error} from '../utils/response.js';
 
 export const getAllBookings = async (req, res) => {
+    console.log('[Controller] getAllBookings called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM booking');
@@ -13,6 +14,7 @@ export const getAllBookings = async (req, res) => {
 };
 
 export const getBookingById = async (req, res) => {
+    console.log('[Controller] getBookingById called', req.params.id);
     try {
         const {id} = req.params;
         const db = await getDBPool();
@@ -35,6 +37,7 @@ export const getBookingById = async (req, res) => {
 };
 
 export const createBooking = async (req, res) => {
+    console.log('[Controller] createBooking called', req.body);
     try {
         const {session_id, status = 'Pending'} = req.body;
         const member_id = req.user.id;
@@ -72,6 +75,7 @@ export const createBooking = async (req, res) => {
 };
 
 export const updateBookingStatus = async (req, res) => {
+    console.log('[Controller] updateBookingStatus called', req.params.id, req.body);
     try {
         const {id} = req.params;
         const {status} = req.body;
@@ -101,7 +105,7 @@ export const updateBookingStatus = async (req, res) => {
             }
         }
 
-        const [result] = await db.query(
+        const result = await db.query(
             'UPDATE booking SET status = ? WHERE id = ?',
             [status, id]
         );
@@ -114,6 +118,7 @@ export const updateBookingStatus = async (req, res) => {
 };
 
 export const getMyBookings = async (req, res) => {
+    console.log('[Controller] getMyBookings called');
     try {
         const member_id = req.user.id;
         const db = await getDBPool();

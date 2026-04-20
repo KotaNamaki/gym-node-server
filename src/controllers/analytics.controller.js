@@ -2,6 +2,7 @@ import {getDBPool} from '../config/db.js';
 import {success, error} from '../utils/response.js';
 
 export const getUserStats = async (req, res) => {
+    console.log('[Controller] getUserStats called');
     try {
         const db = await getDBPool();
         const totalUsersRows = await db.query('SELECT COUNT(*) as count FROM user');
@@ -18,6 +19,7 @@ export const getUserStats = async (req, res) => {
 };
 
 export const getBookingStats = async (req, res) => {
+    console.log('[Controller] getBookingStats called');
     try {
         const db = await getDBPool();
         const statusCounts = await db.query('SELECT status, COUNT(*) as count FROM booking GROUP BY status');
@@ -34,6 +36,7 @@ export const getBookingStats = async (req, res) => {
 };
 
 export const getSessionStats = async (req, res) => {
+    console.log('[Controller] getSessionStats called');
     try {
         const db = await getDBPool();
         const sessionStatsRows = await db.query('SELECT COUNT(*) as total_sessions, status FROM session GROUP BY status');

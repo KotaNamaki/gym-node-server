@@ -2,6 +2,7 @@ import { getDBPool } from '../config/db.js';
 import { success, error } from '../utils/response.js';
 // Get all customer booking history
 const CustomerBookingHistory = async (req, res) => {
+    console.log('[Controller] CustomerBookingHistory called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM customer_booking_history');
@@ -14,6 +15,7 @@ const CustomerBookingHistory = async (req, res) => {
 
 // Get customer booking history by ID
 const CustomerBookingHistoryId = async (req, res) => {
+    console.log('[Controller] CustomerBookingHistoryId called', req.params.id);
     try {
         const { id } = req.params;
         const db = await getDBPool();
@@ -30,6 +32,7 @@ const CustomerBookingHistoryId = async (req, res) => {
 
 // Get all matched trainer-customer pairs
 const matched_trainer_customer = async (req, res) => {
+    console.log('[Controller] matched_trainer_customer called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM matched_trainer_customer');
@@ -45,6 +48,7 @@ const matched_trainer_customer = async (req, res) => {
 
 // Get member progress summary by member ID
 const member_progress_summary_id = async (req, res) => {
+    console.log('[Controller] member_progress_summary_id called', req.params.id);
     try {
         const { id } = req.params;
         const db = await getDBPool();
@@ -61,6 +65,7 @@ const member_progress_summary_id = async (req, res) => {
 
 // Get all member progress summaries
 const member_progress_summary = async (req, res) => {
+    console.log('[Controller] member_progress_summary called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM member_progress_summary');
@@ -76,6 +81,7 @@ const member_progress_summary = async (req, res) => {
 
 // Get session participants
 const session_participants = async (req, res) => {
+    console.log('[Controller] session_participants called', req.params.id);
     try {
         const { id } = req.params;
         const db = await getDBPool();
@@ -101,6 +107,7 @@ const session_participants = async (req, res) => {
 
 // Get session reviews summary
 const session_reviews_summary = async (req, res) => {
+    console.log('[Controller] session_reviews_summary called', req.params.id);
     try {
         const { id } = req.params;
         const db = await getDBPool();
@@ -126,6 +133,7 @@ const session_reviews_summary = async (req, res) => {
 
 // Get trainer schedule
 const trainer_schedule = async (req, res) => {
+    console.log('[Controller] trainer_schedule called', req.params.id);
     try {
         const { id } = req.params;
         const db = await getDBPool();
@@ -151,6 +159,7 @@ const trainer_schedule = async (req, res) => {
 
 // Get upcoming sessions for members
 const upcoming_sessions_for_members = async (req, res) => {
+    console.log('[Controller] upcoming_sessions_for_members called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM upcoming_sessions_for_members');

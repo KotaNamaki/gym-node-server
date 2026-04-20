@@ -24,8 +24,14 @@ const dbCheck = async () => {
     }
 }
 
-export const connectDB = () => dbCheck();
+export const connectDB = () => {
+    console.log('[Config] connectDB called');
+    return dbCheck();
+};
 
-export const getDBPool = () => pool;
+export const getDBPool = () => {
+    console.log('[Config] getDBPool called');
+    return pool;
+};
 
 export default pool;

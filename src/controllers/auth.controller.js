@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import {generateToken} from '../utils/jwt.js';
 
 export const login = async (req, res) => {
+    console.log('[Controller] login called', req.body);
     try {
         const {email, password} = req.body;
         if (!email || !password) {
@@ -43,6 +44,7 @@ export const login = async (req, res) => {
 
 
 export const register = async (req, res) => {
+    console.log('[Controller] register called', req.body);
     try {
         const {nama, email, password, role = 'customer', propinsi, kota} = req.body;
         if (!email || !password || !nama || !propinsi || !kota) {
@@ -83,6 +85,7 @@ export const register = async (req, res) => {
 }
 
 export const getMe = async (req, res) => {
+    console.log('[Controller] getMe called for user:', req.user?.id);
     try {
         const userId = req.user.id;
         const db = await getDBPool();

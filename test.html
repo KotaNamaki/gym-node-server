@@ -162,6 +162,9 @@
     let authToken = localStorage.getItem('gymbuddy_token') || null;
     let currentUser = null;
 
+    // Use a more standard JSON Content-Type with charset
+    const JSON_CONTENT_TYPE = 'application/json; charset=UTF-8';
+
     const endpoints = [
         // Auth
         { group: "Auth", name: "Get Current Profile (Me)", method: "GET", path: "/auth/me", needAuth: true },
@@ -308,10 +311,10 @@
 
         const options = {
             method: method,
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json, text/plain, */*' }
         };
         if (method !== 'GET' && method !== 'HEAD') {
-            options.headers['Content-Type'] = 'application/json';
+            options.headers['Content-Type'] = JSON_CONTENT_TYPE;
         }
         if (authToken) {
             options.headers['Authorization'] = `Bearer ${authToken}`;
@@ -347,7 +350,10 @@
         try {
             const res = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': JSON_CONTENT_TYPE,
+                    'Accept': 'application/json, text/plain, */*'
+                },
                 body: JSON.stringify({ email, password })
             });
 
@@ -420,7 +426,10 @@
         try {
             const res = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': JSON_CONTENT_TYPE,
+                    'Accept': 'application/json, text/plain, */*'
+                },
                 body: JSON.stringify(demoUser)
             });
             const contentType = res.headers.get('content-type');

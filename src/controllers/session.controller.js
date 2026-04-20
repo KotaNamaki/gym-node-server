@@ -10,6 +10,7 @@ const isValidTrainer = async (db, trainer_id) => {
 };
 
 export const getAllSessions = async (req, res) => {
+    console.log('[Controller] getAllSessions called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM session');
@@ -21,6 +22,7 @@ export const getAllSessions = async (req, res) => {
 };
 
 export const getSessionById = async (req, res) => {
+    console.log('[Controller] getSessionById called', req.params.id);
     try {
         const {id} = req.params;
         const db = await getDBPool();
@@ -36,6 +38,7 @@ export const getSessionById = async (req, res) => {
 };
 
 export const createSession = async (req, res) => {
+    console.log('[Controller] createSession called', req.body);
     try {
         const {title, deskripsi, trainer_id, start_time, end_time, price, status = 'scheduled'} = req.body;
         if (!title || !trainer_id || !start_time) {
@@ -66,6 +69,7 @@ export const createSession = async (req, res) => {
 };
 
 export const updateSession = async (req, res) => {
+    console.log('[Controller] updateSession called', req.params.id, req.body);
     try {
         const { id } = req.params;
         const dbCheck = await getDBPool();
@@ -108,6 +112,7 @@ export const updateSession = async (req, res) => {
 };
 
 export const deleteSession = async (req, res) => {
+    console.log('[Controller] deleteSession called', req.params.id);
     try {
         const {id} = req.params;
         const db = await getDBPool();
@@ -123,6 +128,7 @@ export const deleteSession = async (req, res) => {
 };
 
 export const getUpcomingSessions = async (req, res) => {
+    console.log('[Controller] getUpcomingSessions called');
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM upcoming_sessions_for_members');

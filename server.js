@@ -31,14 +31,22 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
 }))
 app.use((req, res, next) => {
+    console.log(`[Middleware] Global: ${req.method} ${req.url}`);
     if ((req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') && !req.headers['content-type']) {
         req.headers['content-type'] = 'application/json';
     }
+    // Also explicitly allow all content types to be handled by express.json() if they are application/json-like
+    // and bypass strict type checking if possible
     next();
 })
 
-app.use(express.json())
+app.use(express.json({ type: '*/*' }))
 app.use(express.urlencoded({ extended: true }))
+
+app.use((req, res, next) => {
+    console.log(`[Middleware] Body Parsed: ${JSON.stringify(req.body)}`);
+    next();
+})
 
 // Rate Limiting
 const authLimiter = rateLimit({
