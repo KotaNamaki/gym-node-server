@@ -50,16 +50,8 @@ export const register = async (req, res) => {
         if (!email || !password || !nama || !propinsi || !kota) {
             return res.status(400).json({ message: 'Nama, email, password, propinsi, dan kota harus diisi.' });
         }
-        
-        // Privilege Escalation Fix: Only allow 'customer' role for public registration
-        // If an admin wants to create another admin/trainer, they should use a different (protected) endpoint or this logic should check the requester's role.
-        // For now, we force 'customer' unless the requester is an admin (but wait, register is usually public).
-        // Let's just restrict it to 'customer' for this public endpoint.
         const allowedRoles = ['customer', 'trainer'];
         if (!allowedRoles.includes(role)) {
-             // If we want to allow admins to create other roles, we'd check auth here.
-             // But the register route doesn't have authMiddleware.
-             // Special case: if req.user is an admin, we allow it.
              if (!req.user || req.user.role !== 'admin') {
                 return res.status(403).json({ message: 'Registration for this role is restricted.' });
              }
@@ -70,7 +62,7 @@ export const register = async (req, res) => {
         if (existingUser.length > 0) {
             return res.status(400).json({ message: 'Email sudah terdaftar.' });
         }
-        const salt = await bcrypt.genSalt(10);
+        const salt = await bcrypt.genSalt(12);
         const passwordHash = await bcrypt.hash(password, salt);
         const result = await db.query(
             'INSERT INTO user (nama, email, password, role, propinsi, kota) VALUES (?, ?, ?, ?, ?, ?)',

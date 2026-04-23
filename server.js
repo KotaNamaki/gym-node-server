@@ -28,7 +28,7 @@ app.use(helmet({
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }))
 app.use((req, res, next) => {
     console.log(`[Middleware] Global: ${req.method} ${req.url}`);
