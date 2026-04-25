@@ -25,12 +25,21 @@ app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }))
-app.options('*', cors()) // Enable pre-flight for all routes
 app.use(cors({
-    origin: '*',
+    origin: function(origin, callback) {
+        // Allow your real domain + null (for local dev)
+        const allowed = ['https://gymbuddy.site', 'https://www.gymbuddy.site', 'https://admin.gymbuddy.site', 'https://www.admin.gymbuddy.site','null', null]
+        if (!origin || allowed.includes(origin)) {
+            callback(null, true)
+        } else {
+            callback(new Error('Not allowed by CORS'))
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }))
+
+app.options('*', cors()) // handle preflight
 app.use((req, res, next) => {
     console.log(`[Middleware] Global: ${req.method} ${req.url}`);
     
