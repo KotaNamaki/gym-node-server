@@ -28,7 +28,7 @@ app.use(helmet({
 app.use(cors({
     origin: function(origin, callback) {
         // Allow your real domain + null (for local dev)
-        const allowed = ['https://gymbuddy.site', 'https://www.gymbuddy.site', 'https://admin.gymbuddy.site', 'https://www.admin.gymbuddy.site','null', null]
+        const allowed = ['https://gymbuddy.site', 'https://www.gymbuddy.site', 'https://admin.gymbuddy.site', 'https://www.admin.gymbuddy.site', 'null', null]
         if (!origin || allowed.includes(origin)) {
             callback(null, true)
         } else {
@@ -39,7 +39,6 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }))
 
-app.options('*', cors()) // handle preflight
 app.use((req, res, next) => {
     console.log(`[Middleware] Global: ${req.method} ${req.url}`);
     
