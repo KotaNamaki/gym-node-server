@@ -26,15 +26,7 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }))
 app.use(cors({
-    origin: function(origin, callback) {
-        // Allow your real domain + null (for local dev)
-        const allowed = ['https://gymbuddy.site', 'https://www.gymbuddy.site', 'https://admin.gymbuddy.site', 'https://www.admin.gymbuddy.site', 'null', null]
-        if (!origin || allowed.includes(origin)) {
-            callback(null, true)
-        } else {
-            callback(new Error('Not allowed by CORS'))
-        }
-    },
+    origin:('*'),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }))
