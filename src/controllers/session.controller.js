@@ -132,7 +132,7 @@ export const getUpcomingSessions = async (req, res) => {
     try {
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM upcoming_sessions_for_members');
-        return success(res, rows, {id: Number(result.insertId)}, 'Session created successfully', 201);
+        return success(res, rows, 'Upcoming sessions fetched successfully');
     } catch (err) {
         console.error('Fetch upcoming sessions error:', err);
         return error(res, 'Internal server error', 500);

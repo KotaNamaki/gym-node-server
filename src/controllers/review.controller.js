@@ -43,7 +43,7 @@ export const createReview = async (req, res) => {
         const db = await getDBPool();
 
         // Cek apakah member pernah booking session ini dengan status Confirmed
-        const [booking] = await db.query(
+        const booking = await db.query(
             `SELECT id FROM booking 
              WHERE session_id = ? AND member_id = ? AND status = 'Confirmed'`,
             [session_id, member_id]
@@ -53,7 +53,7 @@ export const createReview = async (req, res) => {
         }
 
         // Cegah review ganda untuk session yang sama (opsional)
-        const [existingReview] = await db.query(
+        const existingReview = await db.query(
             'SELECT id FROM reviews WHERE session_id = ? AND member_id = ?',
             [session_id, member_id]
         );
@@ -61,11 +61,11 @@ export const createReview = async (req, res) => {
             return error(res, 'You have already reviewed this session', 400);
         }
 
-        const [result] = await db.query(
+        const result = await db.query(
             'INSERT INTO reviews (session_id, member_id, rating_score, comment) VALUES (?, ?, ?, ?)',
             [session_id, member_id, rating_score, comment || null]
         );
-        return success(res, {id: result.insertId}, 'Review created successfully', 201);
+        return success(res, {id: Number(result.insertId)}, 'Review created successfully', 201);
     } catch (err) {
         console.error('Create review error:', err);
         return error(res, 'Internal server error', 500);
@@ -77,7 +77,7 @@ export const deleteReview = async (req, res) => {
     try {
         const {id} = req.params;
         const db = await getDBPool();
-        const [result] = await db.query('DELETE FROM reviews WHERE id = ?', [id]);
+        const result = await db.query('DELETE FROM reviews WHERE id = ?', [id]);
         if (result.affectedRows === 0) {
             return error(res, 'Review not found', 404);
         }

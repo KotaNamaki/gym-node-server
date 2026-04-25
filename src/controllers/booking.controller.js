@@ -49,22 +49,22 @@ export const createBooking = async (req, res) => {
         const db = await getDBPool();
 
         // Validasi: hanya customer yang boleh booking
-        const [userRows] = await db.query('SELECT role FROM user WHERE id = ?', [member_id]);
+        const userRows = await db.query('SELECT role FROM user WHERE id = ?', [member_id]);
         if (userRows.length === 0 || userRows[0].role !== 'customer') {
             return error(res, 'Only customers can make bookings', 403);
         }
 
         // Cek apakah session exists
-        const [session] = await db.query('SELECT id FROM session WHERE id = ?', [session_id]);
+        const session = await db.query('SELECT id FROM session WHERE id = ?', [session_id]);
         if (session.length === 0) {
             return error(res, 'Session not found', 404);
         }
 
-        const [result] = await db.query(
+        const result = await db.query(
             'INSERT INTO booking (session_id, member_id, status) VALUES (?, ?, ?)',
             [session_id, member_id, status]
         );
-        return success(res, {id: result.insertId}, 'Booking created successfully', 201);
+        return success(res, {id: Number(result.insertId)}, 'Booking created successfully', 201);
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
             return error(res, 'You have already booked this session', 400);
@@ -88,7 +88,7 @@ export const updateBookingStatus = async (req, res) => {
         const db = await getDBPool();
 
         // BOLA and Role Check
-        const [rows] = await db.query('SELECT * FROM booking WHERE id = ?', [id]);
+        const rows = await db.query('SELECT * FROM booking WHERE id = ?', [id]);
         if (rows.length === 0) {
             return error(res, 'Booking not found', 404);
         }
