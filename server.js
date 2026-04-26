@@ -34,7 +34,7 @@ app.use(cors({
 
 app.use((req, res, next) => {
     console.log(`[Middleware] Global: ${req.method} ${req.url}`);
-    
+
     // Normalize Content-Type to application/json if it looks like it's meant to be JSON
     // or if it's missing for POST/PUT/PATCH.
     // Some proxies/clients might send variations like application/json;charset=UTF-8
@@ -45,18 +45,18 @@ app.use((req, res, next) => {
             req.headers['content-type'] = 'application/json';
         }
     }
-    
+
     // Explicitly set Accept header if missing to help some proxies
     if (!req.headers['accept'] || req.headers['accept'] === '*/*') {
         req.headers['accept'] = 'application/json';
     }
-    
+
     next();
 })
 
-app.use(express.json({ 
+app.use(express.json({
     type: ['application/json', 'text/plain', 'text/json', '*/*'],
-    limit: '50mb' 
+    limit: '50mb'
 }))
 app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 
@@ -88,5 +88,5 @@ app.use(errorMiddleware)
 connectDB();
 
 
-const PORT = process.env.PORT || 3000
+const PORT = 5000
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`))

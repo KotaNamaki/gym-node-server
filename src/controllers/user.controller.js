@@ -4,7 +4,7 @@ export const getAllUsers = async (req, res) => {
     console.log('[Controller] getAllUsers called');
     try {
         const db = await getDBPool();
-        const rows = await db.query('SELECT id, nama, email, role FROM user');
+        const rows = await db.query('SELECT id, nama, email, role, propinsi, kota, created_at FROM user');
         res.json(rows);
     } catch (error) {
         console.error('Failed to get all users:', error);
@@ -16,14 +16,14 @@ export const getUserById = async (req, res) => {
     console.log('[Controller] getUserById called', req.params.id);
     try {
         const {id} = req.params;
-        
+
         // BOLA Fix: Only admin or the user themselves can access this
         if (req.user.role !== 'admin' && req.user.id !== parseInt(id)) {
             return res.status(403).json({ message: 'Forbidden: You can only access your own profile' });
         }
 
         const db = await getDBPool();
-        const rows = await db.query('SELECT id, nama, email, role FROM user WHERE id = ?', [id]);
+        const rows = await db.query('SELECT id, nama, email, role, propinsi, kota, created_at FROM user WHERE id = ?', [id]);
         if (rows.length === 0) {
             return res.status(404).json({message: 'User not found'});
         }
@@ -84,7 +84,7 @@ export const updateUser = async (req, res) => {
         }
 
         const db = await getDBPool();
-        
+
         // Check if user exists
         const [existing] = await db.query('SELECT * FROM user WHERE id = ?', [id]);
         if (!existing) {
