@@ -13,6 +13,7 @@ import analyticsRoutes from './src/routes/analytics.routes.js'
 import progressRoutes from './src/routes/progress.routes.js'
 import reviewRoutes from './src/routes/review.routes.js'
 import viewsRoutes from './src/routes/views.routes.js'  // ADD THIS
+import trainerRoutes from './src/routes/trainer.routes.js'
 import errorMiddleware from './src/middleware/Error.Middleware.js'
 
 dotenv.config()
@@ -81,6 +82,7 @@ app.use('/api/analytics', analyticsRoutes)
 app.use('/api/progress', progressRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use('/api/views', viewsRoutes)  // ADD THIS - all view endpoints will be under /api/views
+app.use('/api/trainers', trainerRoutes)
 app.use(errorMiddleware)
 
 connectDB();

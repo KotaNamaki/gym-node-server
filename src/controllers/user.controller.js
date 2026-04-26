@@ -70,3 +70,46 @@ export const deleteUserId = async (req, res) => {
         res.status(500).json({ message: 'Error deleting user.' });
     }
 }
+
+export const updateUser = async (req, res) => {
+    console.log('[Controller] updateUser called', req.params.id);
+    try {
+        const { id } = req.params;
+        const { nama, email, role, propinsi, kota } = req.body;
+        const loggedInUser = req.user;
+
+        // Only admin or the user themselves can update
+        if (loggedInUser.role !== 'admin' && loggedInUser.id !== parseInt(id)) {
+            return res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
+        }
+
+        const db = await getDBPool();
+        
+        // Check if user exists
+        const [existing] = await db.query('SELECT * FROM user WHERE id = ?', [id]);
+        if (!existing) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Only admin can change roles
+        const newRole = loggedInUser.role === 'admin' ? (role || existing.role) : existing.role;
+
+        const updateData = {
+            nama: nama || existing.nama,
+            email: email || existing.email,
+            role: newRole,
+            propinsi: propinsi || existing.propinsi,
+            kota: kota || existing.kota
+        };
+
+        await db.query(
+            'UPDATE user SET nama = ?, email = ?, role = ?, propinsi = ?, kota = ? WHERE id = ?',
+            [updateData.nama, updateData.email, updateData.role, updateData.propinsi, updateData.kota, id]
+        );
+
+        res.json({ message: 'User updated successfully', user: { id, ...updateData } });
+    } catch (error) {
+        console.error(`Failed to update user_id ${req.params.id}:`, error);
+        res.status(500).json({ message: 'Error updating user.' });
+    }
+}

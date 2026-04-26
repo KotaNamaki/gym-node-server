@@ -80,6 +80,7 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 | GET | `/api/user` | Get all users | Yes (Admin) |
 | GET | `/api/user/:id` | Get user by ID | Yes (Admin/Self) |
 | GET | `/api/user/email/:email` | Get user by email | Yes (Admin) |
+| PUT | `/api/user/:id` | Update user profile | Yes (Admin/Self) |
 | DELETE | `/api/user/:id` | Delete a user | Yes (Admin) |
 
 ### Sessions/Classes
@@ -91,6 +92,14 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 | POST | `/api/sessions` | Create a new session | Yes (Trainer/Admin) |
 | PUT | `/api/sessions/:id` | Update a session | Yes (Trainer/Admin) |
 | DELETE | `/api/sessions/:id` | Delete a session | Yes (Admin) |
+
+### Trainers
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/trainers` | Get all trainers | No |
+| GET | `/api/trainers/:id` | Get trainer by ID | No |
+| GET | `/api/trainers/:id/name` | Get trainer name | No |
+| PUT | `/api/trainers/:id` | Update trainer profile | Yes (Admin/Self) |
 
 **Create Session Example:**
 ```json
