@@ -1,6 +1,7 @@
 import {getDBPool} from '../config/db.js';
 import bcrypt from 'bcryptjs';
 import {generateToken} from '../utils/jwt.js';
+import cache from '../utils/cache.js';
 
 export const login = async (req, res) => {
     console.log('[Controller] login called', req.body);
@@ -72,6 +73,12 @@ export const register = async (req, res) => {
 
         // Fetch the newly created user to return full object
         const newUser = await db.query('SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ?', [userId]);
+
+        // Invalidate trainer list cache if a new trainer is registered
+        if (role === 'trainer') {
+            cache.del('all_trainers');
+            console.log('[Cache] Invalidated all_trainers due to new trainer registration');
+        }
 
         // Return in format expected by react-admin
         res.status(201).json({

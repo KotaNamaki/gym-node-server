@@ -1,10 +1,22 @@
 import {getDBPool} from '../config/db.js';
+import cache from '../utils/cache.js';
 
 export const getAllUsers = async (req, res) => {
     console.log('[Controller] getAllUsers called');
     try {
+        const cacheKey = 'all_users';
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return res.json(cachedData);
+        }
+
         const db = await getDBPool();
         const rows = await db.query('SELECT id, nama, email, role, propinsi, kota, created_at FROM user');
+        
+        cache.set(cacheKey, rows);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         res.json(rows);
     } catch (error) {
         console.error('Failed to get all users:', error);
@@ -22,11 +34,22 @@ export const getUserById = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: You can only access your own profile' });
         }
 
+        const cacheKey = `user_${id}`;
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return res.json(cachedData);
+        }
+
         const db = await getDBPool();
         const rows = await db.query('SELECT id, nama, email, role, propinsi, kota, created_at FROM user WHERE id = ?', [id]);
         if (rows.length === 0) {
             return res.status(404).json({message: 'User not found'});
         }
+
+        cache.set(cacheKey, rows[0]);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         res.json(rows[0]);
     }
     catch (error) {
@@ -61,9 +84,14 @@ export const deleteUserId = async (req, res) => {
         }
         const db = await getDBPool();
         const result = await db.query('DELETE FROM user WHERE id = ?', [id]);
-        if (result.affectedRows === 0) {
-            return res.status(404).json({message: 'User not found'});
-        }
+
+        // Invalidate cache
+        cache.del('all_users');
+        cache.del('all_trainers');
+        cache.del(`user_${id}`);
+        cache.del(`trainer_${id}`);
+        console.log('[Cache] Invalidated for deleted user', id);
+
         res.json({message: 'User deleted'});
     } catch (error) {
         console.error(`Failed to delete user_id ${req.params.id}:`, error);
@@ -106,6 +134,13 @@ export const updateUser = async (req, res) => {
             'UPDATE user SET nama = ?, email = ?, role = ?, propinsi = ?, kota = ? WHERE id = ?',
             [updateData.nama, updateData.email, updateData.role, updateData.propinsi, updateData.kota, id]
         );
+
+        // Invalidate cache
+        cache.del('all_users');
+        cache.del('all_trainers');
+        cache.del(`user_${id}`);
+        cache.del(`trainer_${id}`);
+        console.log('[Cache] Invalidated for updated user', id);
 
         res.json({ message: 'User updated successfully', user: { id, ...updateData } });
     } catch (error) {

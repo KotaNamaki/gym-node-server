@@ -24,6 +24,7 @@
     "mariadb": "^3.5.2",
     "mongoose": "^9.4.1",
     "mysql2": "^3.22.0",
+    "node-cache": "^5.1.2",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {

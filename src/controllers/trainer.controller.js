@@ -1,10 +1,22 @@
 import {getDBPool} from '../config/db.js';
+import cache from '../utils/cache.js';
 
 export const getAllTrainers = async (req, res) => {
     console.log('[Controller] getAllTrainers called');
     try {
+        const cacheKey = 'all_trainers';
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return res.json(cachedData);
+        }
+
         const db = await getDBPool();
         const rows = await db.query("SELECT id, nama, email, role, propinsi, kota FROM user WHERE role = 'trainer'");
+
+        cache.set(cacheKey, rows);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         res.json(rows);
     } catch (error) {
         console.error('Failed to get all trainers:', error);
@@ -16,11 +28,22 @@ export const getTrainerById = async (req, res) => {
     console.log('[Controller] getTrainerById called', req.params.id);
     try {
         const { id } = req.params;
+        const cacheKey = `trainer_${id}`;
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return res.json(cachedData);
+        }
+
         const db = await getDBPool();
         const rows = await db.query("SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ? AND role = 'trainer'", [id]);
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Trainer not found' });
         }
+
+        cache.set(cacheKey, rows[0]);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         res.json(rows[0]);
     } catch (error) {
         console.error(`Failed to get trainer_id ${req.params.id}:`, error);
@@ -57,7 +80,7 @@ export const updateTrainer = async (req, res) => {
         }
 
         const db = await getDBPool();
-        
+
         // Check if trainer exists
         const rows = await db.query("SELECT * FROM user WHERE id = ? AND role = 'trainer'", [id]);
         if (rows.length === 0) {
@@ -73,9 +96,14 @@ export const updateTrainer = async (req, res) => {
         };
 
         await db.query(
-            'UPDATE user SET nama = ?, email = ?, propinsi = ?, kota = ? WHERE id = ? AND role = "trainer"',
+            "UPDATE user SET nama = ?, email = ?, propinsi = ?, kota = ? WHERE id = ? AND role = 'trainer'",
             [updateData.nama, updateData.email, updateData.propinsi, updateData.kota, id]
         );
+
+        // Invalidate cache
+        cache.del('all_trainers');
+        cache.del(`trainer_${id}`);
+        console.log('[Cache] Invalidated for updated trainer', id);
 
         res.json({ message: 'Trainer updated successfully', trainer: { id, ...updateData } });
     } catch (error) {
