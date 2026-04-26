@@ -52,9 +52,9 @@ export const register = async (req, res) => {
         }
         const allowedRoles = ['customer', 'trainer', 'admin'];
         if (!allowedRoles.includes(role)) {
-             if (!req.user || req.user.role !== 'admin') {
+            if (!req.user || req.user.role !== 'admin') {
                 return res.status(403).json({ message: 'Registration for this role is restricted.' });
-             }
+            }
         }
 
         const db = await getDBPool();
@@ -69,13 +69,21 @@ export const register = async (req, res) => {
             [nama, email, passwordHash, role, propinsi, kota]
         );
         const userId = typeof result.insertId === 'bigint' ? Number(result.insertId) : result.insertId;
-        res.status(201).json({ message: 'User berhasil didaftarkan.', userId });
+
+        // Fetch the newly created user to return full object
+        const newUser = await db.query('SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ?', [userId]);
+
+        // Return in format expected by react-admin
+        res.status(201).json({
+            id: userId,  // Add this for react-admin
+            ...newUser[0],  // Spread the user data
+            message: 'User berhasil didaftarkan.'
+        });
     } catch (error) {
         console.error('Failed to register user:', error);
         res.status(500).json({ message: 'Gagal mendaftarkan user.' });
     }
 }
-
 export const getMe = async (req, res) => {
     console.log('[Controller] getMe called for user:', req.user?.id);
     try {
