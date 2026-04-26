@@ -12,20 +12,20 @@ export const login = async (req, res) => {
 
         const db = await getDBPool();
         const rows = await db.query('SELECT * FROM user WHERE email = ?', [email]);
-        
+
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const user = rows[0];
         const isMatch = await bcrypt.compare(password, user.password);
-        
+
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const token = generateToken({ id: user.id, email: user.email, role: user.role });
-        
+
         res.json({
             message: 'Login successful',
             token,
@@ -50,7 +50,7 @@ export const register = async (req, res) => {
         if (!email || !password || !nama || !propinsi || !kota) {
             return res.status(400).json({ message: 'Nama, email, password, propinsi, dan kota harus diisi.' });
         }
-        const allowedRoles = ['customer', 'trainer'];
+        const allowedRoles = ['customer', 'trainer', 'admin'];
         if (!allowedRoles.includes(role)) {
              if (!req.user || req.user.role !== 'admin') {
                 return res.status(403).json({ message: 'Registration for this role is restricted.' });
@@ -82,7 +82,7 @@ export const getMe = async (req, res) => {
         const userId = req.user.id;
         const db = await getDBPool();
         const rows = await db.query('SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ?', [userId]);
-        
+
         if (rows.length === 0) {
             return res.status(404).json({ message: 'User not found' });
         }

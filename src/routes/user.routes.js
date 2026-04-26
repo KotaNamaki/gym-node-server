@@ -12,6 +12,7 @@ router.get('/:id', authMiddleware, getUserById);
 router.put('/:id', authMiddleware, updateUser);
 router.get('/email/:email', authMiddleware, adminReq, getUserByEmail);
 router.delete('/:id', authMiddleware, adminReq, deleteUserId);
+router.post('/create',authMiddleware,adminReq, register);
 
 
 export default router;
