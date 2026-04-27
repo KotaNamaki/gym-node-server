@@ -2,24 +2,33 @@ import {getDBPool} from '../config/db.js';
 import cache from '../utils/cache.js';
 
 export const getAllTrainers = async (req, res) => {
-    console.log('[Controller] getAllTrainers called');
     try {
-        const cacheKey = 'all_trainers';
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            console.log('[Cache] Hit for', cacheKey);
-            return res.json(cachedData);
+        const db = await getDBPool();
+        const { nama, email, _page, _limit } = req.query;
+
+        const page = parseInt(_page) || 1;
+        const limit = parseInt(_limit) || 20;
+        const offset = (page - 1) * limit;
+
+        let query = "SELECT id, nama, email, role, propinsi, kota FROM user WHERE role = 'trainer'";
+        let countQuery = "SELECT COUNT(*) as total FROM user WHERE role = 'trainer'";
+        let params = [];
+
+        if (nama) {
+            query += ' AND nama LIKE ?';
+            countQuery += ' AND nama LIKE ?';
+            params.push(`%${nama}%`);
         }
 
-        const db = await getDBPool();
-        const rows = await db.query("SELECT id, nama, email, role, propinsi, kota FROM user WHERE role = 'trainer'");
+        const rows = await db.query(query + ' LIMIT ? OFFSET ?', [...params, limit, offset]);
+        const countResult = await db.query(countQuery, params); // Destructure array hasil query
 
-        cache.set(cacheKey, rows);
-        console.log('[Cache] Miss for', cacheKey, '- Data cached');
-
+// PERBAIKAN DI SINI: Ambil elemen pertama dari hasil array
+        const total = countResult[0]?.total || 0;
+        res.setHeader('X-Total-Count', total);
+        res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
         res.json(rows);
     } catch (error) {
-        console.error('Failed to get all trainers:', error);
         res.status(500).json({ message: 'Error fetching trainers.' });
     }
 };

@@ -1,11 +1,11 @@
 import {getDBPool} from '../config/db.js';
 import {success, error} from '../utils/response.js';
-
+import cache from '../utils/cache.js';
 export const getAllBookings = async (req, res) => {
     console.log('[Controller] getAllBookings called');
     try {
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM booking');
+        const rows = await db.query('SELECT id, session_id, member_id, status, datetime_created FROM booking');
         return success(res, rows, 'Bookings fetched successfully');
     } catch (err) {
         console.error('Fetch bookings error:', err);
@@ -18,7 +18,7 @@ export const getBookingById = async (req, res) => {
     try {
         const {id} = req.params;
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM booking WHERE id = ?', [id]);
+        const rows = await db.query('SELECT id, session_id, member_id, status, datetime_created FROM booking WHERE id = ?', [id]);
         if (rows.length === 0) {
             return error(res, 'Booking not found', 404);
         }
@@ -64,6 +64,17 @@ export const createBooking = async (req, res) => {
             'INSERT INTO booking (session_id, member_id, status) VALUES (?, ?, ?)',
             [session_id, member_id, status]
         );
+
+        // Invalidate cache
+        import('../utils/cache.js').then(cache => {
+            cache.default.del('booking_stats');
+            cache.default.del('view_customer_booking_history');
+            cache.default.del(`view_customer_booking_history_${member_id}`);
+            cache.default.del(`view_session_participants_${session_id}`);
+            cache.default.del('view_session_participants');
+            console.log('[Cache] Invalidated booking cache');
+        });
+
         return success(res, {id: Number(result.insertId)}, 'Booking created successfully', 201);
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
@@ -110,6 +121,14 @@ export const updateBookingStatus = async (req, res) => {
             [status, id]
         );
 
+        if (result.affectedRows === 0) {
+            return error(res, 'Booking not found', 404);
+        }
+// Then use directly:
+        cache.del('booking_stats');
+        cache.del('view_customer_booking_history');
+        cache.del(`view_customer_booking_history_${member_id}`);
+
         return success(res, null, 'Booking status updated successfully');
     } catch (err) {
         console.error('Update booking status error:', err);
@@ -121,8 +140,15 @@ export const getMyBookings = async (req, res) => {
     console.log('[Controller] getMyBookings called');
     try {
         const member_id = req.user.id;
+        const cacheKey = `view_customer_booking_history_${member_id}`;
+        const cachedData = (await import('../utils/cache.js')).default.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return success(res, cachedData, 'My bookings fetched successfully (from cache)');
+        }
+
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM customer_booking_history WHERE customer_id = ?', [member_id]);
+        const rows = await db.query('SELECT customer_id, customer_name, session_title, status, booked_on FROM customer_booking_history WHERE customer_id = ?', [member_id]);
         return success(res, rows, 'My bookings fetched successfully');
     } catch (err) {
         console.error('Fetch my bookings error:', err);

@@ -1,5 +1,5 @@
 import {getDBPool} from '../config/db.js';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import {generateToken} from '../utils/jwt.js';
 import cache from '../utils/cache.js';
 
@@ -70,6 +70,10 @@ export const register = async (req, res) => {
             [nama, email, passwordHash, role, propinsi, kota]
         );
         const userId = typeof result.insertId === 'bigint' ? Number(result.insertId) : result.insertId;
+
+        // Invalidate cache
+        cache.del('user_stats');
+        console.log('[Cache] Invalidated user stats');
 
         // Fetch the newly created user to return full object
         const newUser = await db.query('SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ?', [userId]);

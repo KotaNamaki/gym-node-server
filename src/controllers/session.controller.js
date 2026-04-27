@@ -1,5 +1,6 @@
 import {getDBPool} from '../config/db.js';
 import {success, error} from '../utils/response.js';
+import cache from '../utils/cache.js';
 
 const validSessionStatuses = ['scheduled', 'ongoing', 'completed', 'cancelled'];
 
@@ -12,8 +13,19 @@ const isValidTrainer = async (db, trainer_id) => {
 export const getAllSessions = async (req, res) => {
     console.log('[Controller] getAllSessions called');
     try {
+        const cacheKey = 'all_sessions';
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return success(res, cachedData, 'Sessions fetched successfully (from cache)');
+        }
+
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM session');
+        const rows = await db.query('SELECT id, title, deskripsi, trainer_id, start_time, end_time, price, status FROM session');
+
+        cache.set(cacheKey, rows, 600);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         return success(res, rows, 'Sessions fetched successfully');
     } catch (err) {
         console.error('Fetch sessions error:', err);
@@ -25,11 +37,22 @@ export const getSessionById = async (req, res) => {
     console.log('[Controller] getSessionById called', req.params.id);
     try {
         const {id} = req.params;
+        const cacheKey = `session_${id}`;
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return success(res, cachedData, 'Session fetched successfully (from cache)');
+        }
+
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM session WHERE id = ?', [id]);
+        const rows = await db.query('SELECT id, title, deskripsi, trainer_id, start_time, end_time, price, status FROM session WHERE id = ?', [id]);
         if (rows.length === 0) {
             return error(res, 'Session not found', 404);
         }
+
+        cache.set(cacheKey, rows[0], 600);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         return success(res, rows[0], 'Session fetched successfully');
     } catch (err) {
         console.error('Fetch session error:', err);
@@ -61,7 +84,15 @@ export const createSession = async (req, res) => {
             'INSERT INTO session (title, deskripsi, trainer_id, start_time, end_time, price, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [title, deskripsi, trainer_id, start_time, end_time, price, status]
         );
-        return success(res, {id: Number(result.insertId)}, 'Session created successfully', 201);
+
+        // Invalidate cache
+        cache.del('all_sessions');
+        cache.del('upcoming_sessions');
+        cache.del('view_upcoming_sessions');
+        cache.del('session_stats');
+        console.log('[Cache] Invalidated sessions cache');
+
+        return success(res, {id: Number(result.BIGINT)}, 'Session created successfully', 201);
     } catch (err) {
         console.error('Create session error:', err);
         return error(res, 'Internal server error', 500);
@@ -104,6 +135,17 @@ export const updateSession = async (req, res) => {
         if (result.affectedRows === 0) {
             return error(res, 'Session not found', 404);
         }
+
+        // Invalidate cache
+        cache.del('all_sessions');
+        cache.del(`session_${id}`);
+        cache.del('upcoming_sessions');
+        cache.del('view_upcoming_sessions');
+        cache.del('session_stats');
+        cache.del(`view_session_participants_${id}`);
+        cache.del('view_session_participants');
+        console.log('[Cache] Invalidated sessions cache for', id);
+
         return success(res, null, 'Session updated successfully');
     } catch (err) {
         console.error('Update session error:', err);
@@ -120,6 +162,15 @@ export const deleteSession = async (req, res) => {
         if (result.affectedRows === 0) {
             return error(res, 'Session not found', 404);
         }
+
+        // Invalidate cache
+        cache.del('all_sessions');
+        cache.del(`session_${id}`);
+        cache.del('upcoming_sessions');
+        cache.del('view_upcoming_sessions');
+        cache.del('session_stats');
+        console.log('[Cache] Invalidated sessions cache after deletion of', id);
+
         return success(res, null, 'Session deleted successfully');
     } catch (err) {
         console.error('Delete session error:', err);
@@ -130,8 +181,19 @@ export const deleteSession = async (req, res) => {
 export const getUpcomingSessions = async (req, res) => {
     console.log('[Controller] getUpcomingSessions called');
     try {
+        const cacheKey = 'upcoming_sessions';
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return success(res, cachedData, 'Upcoming sessions fetched successfully (from cache)');
+        }
+
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM upcoming_sessions_for_members');
+        const rows = await db.query('SELECT session_id, title, trainer_name, start_time, end_time, price FROM upcoming_sessions_for_members');
+
+        cache.set(cacheKey, rows, 600);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
         return success(res, rows, 'Upcoming sessions fetched successfully');
     } catch (err) {
         console.error('Fetch upcoming sessions error:', err);

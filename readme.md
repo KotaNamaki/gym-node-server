@@ -78,9 +78,11 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
 | GET | `/api/user` | Get all users | Yes (Admin) |
-| GET | `/api/user/:id` | Get user by ID | Yes (Admin/Self) |
+| POST | `/api/user/register` | Register a new user | No |
+| POST | `/api/user/create` | Admin creates a new user | Yes (Admin) |
+| GET | `/api/user/:id` | Get user by ID | Yes (Any) |
 | GET | `/api/user/email/:email` | Get user by email | Yes (Admin) |
-| PUT | `/api/user/:id` | Update user profile | Yes (Admin/Self) |
+| PUT | `/api/user/:id` | Update user profile | Yes (Any) |
 | DELETE | `/api/user/:id` | Delete a user | Yes (Admin) |
 
 ### Sessions/Classes
@@ -99,7 +101,7 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 | GET | `/api/trainers` | Get all trainers | No |
 | GET | `/api/trainers/:id` | Get trainer by ID | No |
 | GET | `/api/trainers/:id/name` | Get trainer name | No |
-| PUT | `/api/trainers/:id` | Update trainer profile | Yes (Admin/Self) |
+| PUT | `/api/trainers/:id` | Update trainer profile | Yes (Any) |
 
 **Create Session Example:**
 ```json
@@ -119,9 +121,9 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 |--------|----------|-------------|---------------|
 | GET | `/api/bookings` | Get all bookings | Yes (Admin) |
 | GET | `/api/bookings/my` | Get current user's bookings | Yes |
-| GET | `/api/bookings/:id` | Get booking by ID | Yes (Admin/Owner) |
+| GET | `/api/bookings/:id` | Get booking by ID | Yes (Any) |
 | POST | `/api/bookings` | Create a new booking | Yes (Customer) |
-| PATCH | `/api/bookings/:id/status` | Update booking status | Yes (Admin/Owner for cancel) |
+| PATCH | `/api/bookings/:id/status` | Update booking status | Yes (Any) |
 
 **Create Booking Example:**
 ```json
@@ -160,7 +162,7 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 |--------|----------|-------------|---------------|
 | GET | `/api/reviews` | Get all reviews | Yes (Admin) |
 | GET | `/api/reviews/session/:session_id` | Get reviews for a session | No |
-| POST | `/api/reviews` | Create a review | Yes (Customer who attended) |
+| POST | `/api/reviews` | Create a review | Yes (Customer) |
 | DELETE | `/api/reviews/:id` | Delete a review | Yes (Admin) |
 
 **Create Review Example:**
@@ -182,7 +184,10 @@ Custom reports and specific views for different roles. All require `authMiddlewa
 | GET | `/api/views/matched-trainer-customer` | View matched trainer-customer data | Admin, Trainer |
 | GET | `/api/views/progress-summary` | All progress summary | Admin, Trainer |
 | GET | `/api/views/progress-summary/:id` | Progress summary for specific user | Admin, Trainer, Self |
-| GET | `/api/views/session-participants/:id?` | View session participants | Admin, Trainer |
-| GET | `/api/views/session-reviews/:id?` | View session reviews summary | Any Authenticated |
-| GET | `/api/views/trainer-schedule/:id?` | View trainer schedule | Admin, Trainer (Own) |
+| GET | `/api/views/session-participants` | View all session participants | Admin, Trainer |
+| GET | `/api/views/session-participants/:id` | View session participants by ID | Admin, Trainer |
+| GET | `/api/views/session-reviews` | View session reviews summary | Any Authenticated |
+| GET | `/api/views/session-reviews/:id` | View session reviews by ID | Any Authenticated |
+| GET | `/api/views/trainer-schedule` | View all trainer schedules | Admin, Trainer |
+| GET | `/api/views/trainer-schedule/:id` | View trainer schedule by ID | Admin, Trainer, Self |
 | GET | `/api/views/upcoming-sessions` | View upcoming sessions for members | Any Authenticated |

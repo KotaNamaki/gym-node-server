@@ -5,7 +5,7 @@ export const getAllReviews = async (req, res) => {
     console.log('[Controller] getAllReviews called');
     try {
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM reviews');
+        const rows = await db.query('SELECT id, session_id, member_id, rating_score, comment, datetime_created FROM reviews');
         return success(res, rows, 'All reviews fetched successfully');
     } catch (err) {
         console.error('Fetch reviews error:', err);
@@ -18,7 +18,7 @@ export const getSessionReviews = async (req, res) => {
     try {
         const {session_id} = req.params;
         const db = await getDBPool();
-        const rows = await db.query('SELECT * FROM session_reviews_summary WHERE session_id = ?', [session_id]);
+        const rows = await db.query('SELECT session_id, session_title, rating_score, trainer_name, customer_name, comment FROM session_reviews_summary WHERE session_id = ?', [session_id]);
         return success(res, rows, 'Session reviews fetched successfully');
     } catch (err) {
         console.error('Fetch session reviews error:', err);
@@ -65,6 +65,14 @@ export const createReview = async (req, res) => {
             'INSERT INTO reviews (session_id, member_id, rating_score, comment) VALUES (?, ?, ?, ?)',
             [session_id, member_id, rating_score, comment || null]
         );
+
+        // Invalidate cache
+        import('../utils/cache.js').then(cache => {
+            cache.default.del('view_session_reviews_summary');
+            cache.default.del(`view_session_reviews_summary_${session_id}`);
+            console.log('[Cache] Invalidated review summary cache');
+        });
+
         return success(res, {id: Number(result.insertId)}, 'Review created successfully', 201);
     } catch (err) {
         console.error('Create review error:', err);
@@ -77,10 +85,25 @@ export const deleteReview = async (req, res) => {
     try {
         const {id} = req.params;
         const db = await getDBPool();
+
+        // Fetch session_id for invalidation before deleting
+        const reviewRows = await db.query('SELECT session_id FROM reviews WHERE id = ?', [id]);
+
         const result = await db.query('DELETE FROM reviews WHERE id = ?', [id]);
         if (result.affectedRows === 0) {
             return error(res, 'Review not found', 404);
         }
+
+        // Invalidate cache
+        if (reviewRows.length > 0) {
+            const session_id = reviewRows[0].session_id;
+            import('../utils/cache.js').then(cache => {
+                cache.default.del('view_session_reviews_summary');
+                cache.default.del(`view_session_reviews_summary_${session_id}`);
+                console.log('[Cache] Invalidated review summary cache for session', session_id);
+            });
+        }
+
         return success(res, null, 'Review deleted successfully');
     } catch (err) {
         console.error('Delete review error:', err);

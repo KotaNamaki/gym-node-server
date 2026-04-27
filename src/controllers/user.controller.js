@@ -2,27 +2,50 @@ import {getDBPool} from '../config/db.js';
 import cache from '../utils/cache.js';
 
 export const getAllUsers = async (req, res) => {
-    console.log('[Controller] getAllUsers called');
     try {
-        const cacheKey = 'all_users';
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            console.log('[Cache] Hit for', cacheKey);
-            return res.json(cachedData);
+        const db = await getDBPool();
+        const { role, nama, email, _page, _limit, _sort, _order } = req.query;
+
+        const page = parseInt(_page) || 1;
+        const limit = parseInt(_limit) || 20;
+        const offset = (page - 1) * limit;
+
+        let query = 'SELECT id, nama, email, role, propinsi, kota, created_at FROM user WHERE 1=1';
+        let countQuery = 'SELECT COUNT(*) as total FROM user WHERE 1=1';
+        let params = [];
+        if (role) {
+            query += ' AND role = ?';
+            countQuery += ' AND role = ?';
+            params.push(role);
+        }
+        if (nama) {
+            query += ' AND nama LIKE ?';
+            countQuery += ' AND nama LIKE ?';
+            params.push(`%${nama}%`);
+        }
+        if (email) {
+            query += ' AND email LIKE ?';
+            countQuery += ' AND email LIKE ?';
+            params.push(`%${email}%`);
         }
 
-        const db = await getDBPool();
-        const rows = await db.query('SELECT id, nama, email, role, propinsi, kota, created_at FROM user');
-        
-        cache.set(cacheKey, rows);
-        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+        // Add Sorting
+        const sortField = _sort || 'id';
+        const sortOrder = _order || 'ASC';
+        query += ` ORDER BY ${sortField} ${sortOrder}`;
 
+        const dataQuery = query + ' LIMIT ? OFFSET ?';
+        const dataParams = [...params, limit, offset];
+        const rows = await db.query(dataQuery, dataParams);
+        const countResult = await db.query(countQuery, params);
+        const total = countResult[0]?.total || 0;
+        res.setHeader('X-Total-Count', total);
+        res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
         res.json(rows);
     } catch (error) {
-        console.error('Failed to get all users:', error);
-        res.status(500).json({ message: 'Error fetching users.' });
+        res.status(500).json({ message: 'Error fetching users' });
     }
-}
+};
 
 export const getUserById = async (req, res) => {
     console.log('[Controller] getUserById called', req.params.id);
@@ -77,22 +100,64 @@ export const getUserByEmail = async (req, res) => {
 export const deleteUserId = async (req, res) => {
     console.log('[Controller] deleteUserId called', req.params.id);
     try {
-        const {id} = req.params;
+        const { id } = req.params;
         const loggedInUserRole = req.user.role;
+
         if (loggedInUserRole !== 'admin') {
-            return res.status(403).json({message: 'Forbidden'});
+            return res.status(403).json({ message: 'Forbidden: Admin only' });
         }
+
+        // Prevent self-deletion
+        if (parseInt(id) === req.user.id) {
+            return res.status(400).json({ message: 'Cannot delete your own account' });
+        }
+
         const db = await getDBPool();
-        const result = await db.query('DELETE FROM user WHERE id = ?', [id]);
+        const connection = await db.getConnection();
 
-        // Invalidate cache
-        cache.del('all_users');
-        cache.del('all_trainers');
-        cache.del(`user_${id}`);
-        cache.del(`trainer_${id}`);
-        console.log('[Cache] Invalidated for deleted user', id);
+        try {
+            await connection.beginTransaction();
 
-        res.json({message: 'User deleted'});
+            // Check if user exists
+            const user = await connection.query('SELECT id, email FROM user WHERE id = ?', [id]);
+            if (user.length === 0) {
+                await connection.rollback();
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            // Delete related trainer profile first (if exists)
+            const trainerResult = await connection.query('DELETE FROM user WHERE id = ?', [id]);
+            if (trainerResult.affectedRows > 0) {
+                console.log(`[Delete] Removed trainer profile for user ${id}`);
+            }
+
+            // Delete any other related records (sessions, bookings, etc.)
+            // await connection.query('DELETE FROM sessions WHERE user_id = ?', [id]);
+            await connection.query('DELETE FROM booking WHERE member_id = ?', [id]);
+
+            // Finally delete the user
+            const result = await connection.query('DELETE FROM user WHERE id = ?', [id]);
+
+            await connection.commit();
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            // Invalidate all related cache keys
+            const cacheKeys = ['all_users', 'all_trainers', `user_${id}`, `trainer_${id}`];
+            cacheKeys.forEach(key => cache.del(key));
+            console.log('[Cache] Invalidated for deleted user', id);
+
+            res.json({
+                message: 'User deleted successfully',
+                details: trainerResult.affectedRows > 0 ? 'Trainer profile also removed' : undefined
+            });
+
+        } catch (error) {
+            await connection.rollback();
+            console.error(`Failed to delete user_id ${req.params.id}:`, error);
+        }
     } catch (error) {
         console.error(`Failed to delete user_id ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error deleting user.' });

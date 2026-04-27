@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import compression from 'compression'
 import { rateLimit } from 'express-rate-limit'
 import dotenv from 'dotenv'
 import {connectDB, getDBPool} from './src/config/db.js'
@@ -21,15 +22,17 @@ getDBPool()
 
 const app = express()
 
-// Security Middleware
+// Security & Optimization Middleware
 app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }))
+app.use(compression())
 app.use(cors({
     origin:('*'),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    exposedHeaders: ['X-Total-Count']
 }))
 
 app.use((req, res, next) => {
