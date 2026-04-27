@@ -10,6 +10,6 @@ router.get('/upcoming', getUpcomingSessions);
 router.get('/:id', getSessionById);
 router.post('/', authMiddleware, trainerReq, createSession);
 router.put('/:id', authMiddleware, trainerReq, updateSession);
-router.delete('/:id', authMiddleware, adminReq, deleteSession);
+router.delete('/:id', authMiddleware, adminReq, trainerReq, deleteSession);
 
 export default router;
