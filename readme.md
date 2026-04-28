@@ -21,6 +21,10 @@ A Node.js backend for managing fitness sessions, bookings, member progress, and 
 - Node.js (v16 or higher)
 - MySQL database
 
+## live server
+https://server.gymbuddy.site/api
+
+
 ## Installation
 1. Clone the repository
 2. Install dependencies:
@@ -93,7 +97,7 @@ Most endpoints require a JSON Web Token (JWT). To authenticate:
 | GET | `/api/sessions/:id` | Get session by ID | No |
 | POST | `/api/sessions` | Create a new session | Yes (Trainer/Admin) |
 | PUT | `/api/sessions/:id` | Update a session | Yes (Trainer/Admin) |
-| DELETE | `/api/sessions/:id` | Delete a session | Yes (Admin) |
+| DELETE | `/api/sessions/:id` | Delete a session | Yes (Trainer/Admin) |
 
 ### Trainers
 | Method | Endpoint | Description | Auth Required |

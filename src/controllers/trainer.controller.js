@@ -109,7 +109,7 @@ export const updateTrainer = async (req, res) => {
             [updateData.nama, updateData.email, updateData.propinsi, updateData.kota, id]
         );
 
-        // Invalidate cache
+        // Invalidate +cache
         cache.del('all_trainers');
         cache.del(`trainer_${id}`);
         console.log('[Cache] Invalidated for updated trainer', id);

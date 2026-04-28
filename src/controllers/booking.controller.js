@@ -148,7 +148,7 @@ export const getMyBookings = async (req, res) => {
         }
 
         const db = await getDBPool();
-        const rows = await db.query('SELECT customer_id, customer_name, session_title, status, booked_on FROM customer_booking_history WHERE customer_id = ?', [member_id]);
+        const rows = await db.query('SELECT customer_id, customer_name, session_title, status, booked_on, start_time, end_time FROM customer_booking_history WHERE customer_id = ?', [member_id]);
         return success(res, rows, 'My bookings fetched successfully');
     } catch (err) {
         console.error('Fetch my bookings error:', err);
