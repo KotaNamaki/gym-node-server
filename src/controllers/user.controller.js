@@ -13,6 +13,7 @@ export const getAllUsers = async (req, res) => {
         let query = 'SELECT id, nama, email, role, propinsi, kota, created_at FROM user WHERE 1=1';
         let countQuery = 'SELECT COUNT(*) as total FROM user WHERE 1=1';
         let params = [];
+
         if (role) {
             query += ' AND role = ?';
             countQuery += ' AND role = ?';
@@ -29,9 +30,10 @@ export const getAllUsers = async (req, res) => {
             params.push(`%${email}%`);
         }
 
-        // Add Sorting
-        const sortField = _sort || 'id';
-        const sortOrder = _order || 'ASC';
+        // Whitelist sort fields to prevent SQL injection
+        const allowedSortFields = ['id', 'nama', 'email', 'role', 'created_at'];
+        const sortField = allowedSortFields.includes(_sort) ? _sort : 'id';
+        const sortOrder = _order === 'DESC' ? 'DESC' : 'ASC';
         query += ` ORDER BY ${sortField} ${sortOrder}`;
 
         const dataQuery = query + ' LIMIT ? OFFSET ?';
@@ -39,6 +41,7 @@ export const getAllUsers = async (req, res) => {
         const rows = await db.query(dataQuery, dataParams);
         const countResult = await db.query(countQuery, params);
         const total = countResult[0]?.total || 0;
+
         res.setHeader('X-Total-Count', total);
         res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
         res.json(rows);
@@ -52,7 +55,7 @@ export const getUserById = async (req, res) => {
     try {
         const {id} = req.params;
 
-        // BOLA Fix: Only admin or the user themselves can access this
+        // Only admin or the user themselves can access this
         if (req.user.role !== 'admin' && req.user.id !== parseInt(id)) {
             return res.status(403).json({ message: 'Forbidden: You can only access your own profile' });
         }
@@ -65,7 +68,10 @@ export const getUserById = async (req, res) => {
         }
 
         const db = await getDBPool();
-        const rows = await db.query('SELECT id, nama, email, role, propinsi, kota, created_at FROM user WHERE id = ?', [id]);
+        const rows = await db.query(
+            'SELECT id, nama, email, role, propinsi, kota, created_at FROM user WHERE id = ?',
+            [id]
+        );
         if (rows.length === 0) {
             return res.status(404).json({message: 'User not found'});
         }
@@ -74,12 +80,11 @@ export const getUserById = async (req, res) => {
         console.log('[Cache] Miss for', cacheKey, '- Data cached');
 
         res.json(rows[0]);
-    }
-    catch (error) {
+    } catch (error) {
         console.error(`Failed to get user_id ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error fetching user.' });
     }
-}
+};
 
 export const getUserByEmail = async (req, res) => {
     console.log('[Controller] getUserByEmail called', req.params.email);
@@ -95,7 +100,7 @@ export const getUserByEmail = async (req, res) => {
         console.error(`Failed to get email ${req.params.email}:`, error);
         res.status(500).json({ message: 'Error fetching user email.' });
     }
-}
+};
 
 export const deleteUserId = async (req, res) => {
     console.log('[Controller] deleteUserId called', req.params.id);
@@ -107,7 +112,6 @@ export const deleteUserId = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden: Admin only' });
         }
 
-        // Prevent self-deletion
         if (parseInt(id) === req.user.id) {
             return res.status(400).json({ message: 'Cannot delete your own account' });
         }
@@ -118,24 +122,15 @@ export const deleteUserId = async (req, res) => {
         try {
             await connection.beginTransaction();
 
-            // Check if user exists
-            const user = await connection.query('SELECT id, email FROM user WHERE id = ?', [id]);
+            const user = await connection.query('SELECT id, email, role FROM user WHERE id = ?', [id]);
             if (user.length === 0) {
                 await connection.rollback();
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            // Delete related trainer profile first (if exists)
-            const trainerResult = await connection.query('DELETE FROM user WHERE id = ?', [id]);
-            if (trainerResult.affectedRows > 0) {
-                console.log(`[Delete] Removed trainer profile for user ${id}`);
-            }
-
-            // Delete any other related records (sessions, bookings, etc.)
-            // await connection.query('DELETE FROM sessions WHERE user_id = ?', [id]);
+            // FIX: Was deleting user twice (trainer profile check was also deleting from user).
+            // Instead, rely on FK CASCADE to clean up bookings, then delete the user once.
             await connection.query('DELETE FROM booking WHERE member_id = ?', [id]);
-
-            // Finally delete the user
             const result = await connection.query('DELETE FROM user WHERE id = ?', [id]);
 
             await connection.commit();
@@ -144,25 +139,27 @@ export const deleteUserId = async (req, res) => {
                 return res.status(404).json({ message: 'User not found' });
             }
 
-            // Invalidate all related cache keys
             const cacheKeys = ['all_users', 'all_trainers', `user_${id}`, `trainer_${id}`];
             cacheKeys.forEach(key => cache.del(key));
             console.log('[Cache] Invalidated for deleted user', id);
 
-            res.json({
-                message: 'User deleted successfully',
-                details: trainerResult.affectedRows > 0 ? 'Trainer profile also removed' : undefined
-            });
+            return res.json({ message: 'User deleted successfully' });
 
         } catch (error) {
             await connection.rollback();
             console.error(`Failed to delete user_id ${req.params.id}:`, error);
+            return res.status(500).json({ message: 'Error deleting user transaction.' });
+        } finally {
+            if (connection) {
+                connection.release();
+                console.log('[DB] Connection released back to pool');
+            }
         }
     } catch (error) {
         console.error(`Failed to delete user_id ${req.params.id}:`, error);
-        res.status(500).json({ message: 'Error deleting user.' });
+        return res.status(500).json({ message: 'Error deleting user.' });
     }
-}
+};
 
 export const updateUser = async (req, res) => {
     console.log('[Controller] updateUser called', req.params.id);
@@ -171,15 +168,16 @@ export const updateUser = async (req, res) => {
         const { nama, email, role, propinsi, kota } = req.body;
         const loggedInUser = req.user;
 
-        // Only admin or the user themselves can update
         if (loggedInUser.role !== 'admin' && loggedInUser.id !== parseInt(id)) {
             return res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
         }
 
         const db = await getDBPool();
 
-        // Check if user exists
-        const [existing] = await db.query('SELECT * FROM user WHERE id = ?', [id]);
+        // FIX: db.query returns an array; destructuring [existing] works only if
+        // the driver returns rows as an array. Using rows[0] is safer and consistent.
+        const rows = await db.query('SELECT * FROM user WHERE id = ?', [id]);
+        const existing = rows[0];
         if (!existing) {
             return res.status(404).json({ message: 'User not found' });
         }
@@ -200,7 +198,6 @@ export const updateUser = async (req, res) => {
             [updateData.nama, updateData.email, updateData.role, updateData.propinsi, updateData.kota, id]
         );
 
-        // Invalidate cache
         cache.del('all_users');
         cache.del('all_trainers');
         cache.del(`user_${id}`);
@@ -212,4 +209,4 @@ export const updateUser = async (req, res) => {
         console.error(`Failed to update user_id ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error updating user.' });
     }
-}
+};

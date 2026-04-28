@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Apr 17, 2026 at 03:01 PM
+-- Generation Time: Apr 28, 2026 at 02:06 PM
 -- Server version: 11.4.9-MariaDB-cll-lve
 -- PHP Version: 8.1.34
 
@@ -20,6 +20,7 @@ SET time_zone = "+00:00";
 --
 -- Database: `gymbuddy_database_1`
 --
+DROP DATABASE IF EXISTS `gymbuddy_database_1`;
 CREATE DATABASE IF NOT EXISTS `gymbuddy_database_1` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE `gymbuddy_database_1`;
 
@@ -141,14 +142,6 @@ CREATE TABLE `session` (
   `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
---
--- Dumping data for table `session`
---
-
-INSERT INTO `session` (`id`, `title`, `deskripsi`, `trainer_id`, `start_time`, `end_time`, `price`, `status`, `updated_at`) VALUES
-(1, 'Yoga Updated', 'Relaxing yoga', 5, '2026-05-01 08:00:00', '2026-05-01 09:00:00', 50000.00, 'completed', '2026-04-16 16:53:04'),
-(2, 'Yoga Updated', 'Relaxing yoga', 5, '2026-05-01 08:00:00', '2026-05-01 09:00:00', 50000.00, 'completed', '2026-04-16 16:53:25');
-
 -- --------------------------------------------------------
 
 --
@@ -232,16 +225,6 @@ CREATE TABLE `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
 
 --
--- Dumping data for table `user`
---
-
-INSERT INTO `user` (`id`, `nama`, `email`, `password`, `role`, `propinsi`, `kota`, `created_at`) VALUES
-(1, 'Demo Customer', 'customer@test.com', '$2b$10$4XOOLQ0hYh4isdBx4nfOJeORsteHQvnkczZ/LEZp8XoneBfkmelpC', 'customer', 'DKI Jakarta', 'Jakarta Pusat', '2026-04-15 13:10:38'),
-(2, 'Test User', 'newuser@test.com', '$2b$10$4w2yxvzzokb7pYfRuD84XuDHoALIyx5mvoHG2wq3uQoiEeEidXMLy', 'customer', 'DKI Jakarta', 'Jakarta Selatan', '2026-04-15 13:11:34'),
-(3, 'Andhika', 'dika@mail.com', '$2b$10$VkOpzK3zDPYkut.C9SrPQOiZhamQb9KXBoGY0FZ9Jnt8qStx7IAy.', 'admin', 'Jawa Tengah', 'Purbalingga', '2026-04-15 13:15:57'),
-(5, 'Trainer', 'trainer@test.com', '$2b$10$N.To6/M2ad8gqdPNo.dz8eoTOPB12WZfmFjCWsqeZ5aZ9krIZm3o.', 'trainer', 'Jawa Tengah', 'Banyumas', '2026-04-16 15:36:59');
-
---
 -- Indexes for dumped tables
 --
 
@@ -252,7 +235,8 @@ ALTER TABLE `booking`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `unique_booking` (`session_id`,`member_id`),
   ADD KEY `member_id` (`member_id`),
-  ADD KEY `idx_status` (`status`);
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_session_status` (`session_id`,`status`);
 
 --
 -- Indexes for table `progress`
@@ -260,7 +244,8 @@ ALTER TABLE `booking`
 ALTER TABLE `progress`
   ADD PRIMARY KEY (`id`),
   ADD KEY `member_id` (`member_id`),
-  ADD KEY `progress_ibfk_booking` (`booking_id`);
+  ADD KEY `progress_ibfk_booking` (`booking_id`),
+  ADD KEY `idx_jam_nyatat` (`jam_nyatat`);
 
 --
 -- Indexes for table `reviews`
@@ -277,7 +262,8 @@ ALTER TABLE `reviews`
 ALTER TABLE `session`
   ADD PRIMARY KEY (`id`),
   ADD KEY `session_ibfk_trainer` (`trainer_id`),
-  ADD KEY `idx_start_time` (`start_time`);
+  ADD KEY `idx_start_time` (`start_time`),
+  ADD KEY `idx_trainer_start` (`trainer_id`,`start_time`);
 
 --
 -- Indexes for table `user`
@@ -285,7 +271,8 @@ ALTER TABLE `session`
 ALTER TABLE `user`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`),
-  ADD KEY `idx_role` (`role`);
+  ADD KEY `idx_role` (`role`),
+  ADD KEY `idx_user_role_nama` (`role`,`nama`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -313,13 +300,13 @@ ALTER TABLE `reviews`
 -- AUTO_INCREMENT for table `session`
 --
 ALTER TABLE `session`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
 

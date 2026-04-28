@@ -21,10 +21,9 @@ export const getAllTrainers = async (req, res) => {
         }
 
         const rows = await db.query(query + ' LIMIT ? OFFSET ?', [...params, limit, offset]);
-        const countResult = await db.query(countQuery, params); // Destructure array hasil query
-
-// PERBAIKAN DI SINI: Ambil elemen pertama dari hasil array
+        const countResult = await db.query(countQuery, params);
         const total = countResult[0]?.total || 0;
+
         res.setHeader('X-Total-Count', total);
         res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
         res.json(rows);
@@ -45,7 +44,10 @@ export const getTrainerById = async (req, res) => {
         }
 
         const db = await getDBPool();
-        const rows = await db.query("SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ? AND role = 'trainer'", [id]);
+        const rows = await db.query(
+            "SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ? AND role = 'trainer'",
+            [id]
+        );
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Trainer not found' });
         }
@@ -65,7 +67,10 @@ export const getTrainerNameById = async (req, res) => {
     try {
         const { id } = req.params;
         const db = await getDBPool();
-        const rows = await db.query("SELECT nama FROM user WHERE id = ? AND role = 'trainer'", [id]);
+        const rows = await db.query(
+            "SELECT nama FROM user WHERE id = ? AND role = 'trainer'",
+            [id]
+        );
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Trainer not found' });
         }
@@ -76,6 +81,40 @@ export const getTrainerNameById = async (req, res) => {
     }
 };
 
+export const getTrainerSchedule = async (req, res) => {
+    console.log('[Controller] getTrainerSchedule called', req.params.id);
+    try {
+        const { id } = req.params || {};
+        const trainerId = id || req.user.id;
+
+        // Non-admin trainers can only view their own schedule
+        if (req.user.role === 'trainer' && req.user.id !== parseInt(trainerId)) {
+            return res.status(403).json({ message: 'Forbidden: You can only view your own schedule' });
+        }
+
+        const cacheKey = `view_trainer_schedule_${trainerId}`;
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) {
+            console.log('[Cache] Hit for', cacheKey);
+            return res.json(cachedData);
+        }
+
+        const db = await getDBPool();
+        const rows = await db.query(
+            'SELECT trainer_id, trainer_name, session_id, title, start_time, end_time, confirmed_customers FROM trainer_schedule WHERE trainer_id = ?',
+            [trainerId]
+        );
+
+        cache.set(cacheKey, rows, 300);
+        console.log('[Cache] Miss for', cacheKey, '- Data cached');
+
+        res.json(rows);
+    } catch (error) {
+        console.error(`Failed to get schedule for trainer:`, error);
+        res.status(500).json({ message: 'Error fetching trainer schedule.' });
+    }
+};
+
 export const updateTrainer = async (req, res) => {
     console.log('[Controller] updateTrainer called', req.params.id);
     try {
@@ -83,14 +122,12 @@ export const updateTrainer = async (req, res) => {
         const { nama, email, propinsi, kota } = req.body;
         const loggedInUser = req.user;
 
-        // Only admin or the trainer themselves can update
         if (loggedInUser.role !== 'admin' && loggedInUser.id !== parseInt(id)) {
             return res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
         }
 
         const db = await getDBPool();
 
-        // Check if trainer exists
         const rows = await db.query("SELECT * FROM user WHERE id = ? AND role = 'trainer'", [id]);
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Trainer not found' });
@@ -109,7 +146,6 @@ export const updateTrainer = async (req, res) => {
             [updateData.nama, updateData.email, updateData.propinsi, updateData.kota, id]
         );
 
-        // Invalidate +cache
         cache.del('all_trainers');
         cache.del(`trainer_${id}`);
         console.log('[Cache] Invalidated for updated trainer', id);
