@@ -40,7 +40,7 @@ export const getAllUsers = async (req, res) => {
 
         res.setHeader('X-Total-Count', total);
         res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
-        res.json(rows);
+        res.json({ success: true, data: rows });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching customers' });
     }
@@ -76,6 +76,7 @@ export const getUserByEmail = async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).json({message: 'User not found'});
         }
+
         res.json(rows[0]);
     } catch (error) {
         console.error(`Failed to get email ${req.params.email}:`, error);

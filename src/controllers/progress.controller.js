@@ -15,25 +15,23 @@ export const getAllProgress = async (req, res) => {
 };
 
 export const getMyProgress = async (req, res) => {
-    console.log('[Controller] getMyProgress called');
     try {
         const member_id = req.user.id;
-        const cacheKey = `view_member_progress_summary_${member_id}`;
-
-        // FIX: Use top-level cache import instead of dynamic import each call
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            console.log('[Cache] Hit for', cacheKey);
-            return success(res, cachedData, 'My progress fetched successfully (from cache)');
-        }
-
         const db = await getDBPool();
+
+        // Gunakan query langsung ke tabel progress jika View bermasalah
         const rows = await db.query(
-            'SELECT progress_id, member_id, member_name, activity, duration, note, recorded_at FROM member_progress_summary WHERE member_id = ?',
+            `SELECT id as progress_id, activity, duration, note, jam_nyatat as recorded_at 
+             FROM progress 
+             WHERE member_id = ? 
+             ORDER BY jam_nyatat DESC`,
             [member_id]
         );
 
-        cache.set(cacheKey, rows, 300);
+        // Hapus cache agar data terbaru selalu muncul saat didebug
+        const cacheKey = `view_member_progress_summary_${member_id}`;
+        cache.del(cacheKey);
+
         return success(res, rows, 'My progress fetched successfully');
     } catch (err) {
         console.error('Fetch my progress error:', err);
@@ -57,9 +55,10 @@ export const createProgress = async (req, res) => {
 
         const db = await getDBPool();
 
-        // Validasi booking: Pastikan booking_id tersebut milik member ini (dari tabel user)
+        // Validasi booking: Pastikan booking_id tersebut milik member ini
         if (booking_id) {
-            const [booking] = await db.query(
+            // PERBAIKAN 1: Hapus kurung siku [] pada variabel booking
+            const booking = await db.query(
                 "SELECT id FROM booking WHERE id = ? AND member_id = ? AND status = 'Confirmed'",
                 [booking_id, member_id]
             );
@@ -74,8 +73,12 @@ export const createProgress = async (req, res) => {
         );
 
         cache.del(`view_member_progress_summary_${member_id}`);
-        return success(res, { id: Number(result.insertId) }, 'Progress recorded', 201);
+
+        // PERBAIKAN 2: Gunakan .toString() pada result.insertId
+        return success(res, { id: result.insertId.toString() }, 'Progress recorded', 201);
     } catch (err) {
+        // PERBAIKAN 3: Tambahkan log untuk memudahkan pencarian bug
+        console.error('Error createProgress:', err);
         return error(res, 'Internal server error', 500);
     }
 };

@@ -52,15 +52,15 @@ export const createBooking = async (req, res) => {
 
         const db = await getDBPool();
 
-        // 1. Ambil data customer dari tabel 'user' (karena role trainer/admin sudah dipisah)
-        const [userRows] = await db.query('SELECT nama FROM user WHERE id = ?', [member_id]);
+        // 1. Hapus kurung siku pembungkus variabel
+        const userRows = await db.query('SELECT nama FROM user WHERE id = ?', [member_id]);
         if (userRows.length === 0) {
             return error(res, 'Customer not found', 404);
         }
         const member_name = userRows[0].nama;
 
-        // 2. Cek sesi & join ke tabel 'trainer' (Bukan lagi tabel 'user')
-        const [sessionRows] = await db.query(
+        // 2. Hapus kurung siku pembungkus variabel
+        const sessionRows = await db.query(
             `SELECT s.*, t.nama as trainer_name
              FROM session s
              JOIN trainer t ON s.trainer_id = t.id
@@ -74,30 +74,31 @@ export const createBooking = async (req, res) => {
 
         const session = sessionRows[0];
 
-        // 3. Validasi waktu (Sama seperti sebelumnya)
         if (new Date(session.start_time) < new Date()) {
             return error(res, 'Cannot book a session that has already started', 400);
         }
 
-        // 4. Cek duplikasi booking
-        const [existing] = await db.query(
+        // 3. Hapus kurung siku pembungkus variabel
+        const existing = await db.query(
             "SELECT id FROM booking WHERE session_id = ? AND member_id = ? AND status != 'Cancel'",
             [session_id, member_id]
         );
         if (existing.length > 0) return error(res, 'You already booked this session', 400);
 
-        // 5. Insert ke tabel booking
-        const [result] = await db.query(
+        // 4. Hapus kurung siku pembungkus variabel
+        const result = await db.query(
             'INSERT INTO booking (session_id, member_id, status, member_name) VALUES (?, ?, ?, ?)',
             [session_id, member_id, status, member_name]
         );
 
-        // 6. Invalidate Cache
         cache.del(`customer_booking_history_${member_id}`);
         cache.del('all_bookings');
 
-        return success(res, { id: result.insertId, session_title: session.title, trainer_name: session.trainer_name }, 'Booking success', 201);
+        // 5. Tambahkan Number() pada result.insertId
+        return success(res, { id: Number(result.insertId), session_title: session.title, trainer_name: session.trainer_name }, 'Booking success', 201);
     } catch (err) {
+        // Tambahkan log error agar lebih mudah di-debug di masa depan
+        console.error('Database Error createBooking:', err);
         return error(res, 'Internal server error', 500);
     }
 };
@@ -113,7 +114,9 @@ export const updateBookingStatus = async (req, res) => {
         }
 
         const db = await getDBPool();
-        const [rows] = await db.query(
+
+        // Hapus kurung siku pada pembungkus variabel rows
+        const rows = await db.query(
             `SELECT b.*, s.trainer_id FROM booking b 
              JOIN session s ON b.session_id = s.id WHERE b.id = ?`, [id]
         );
@@ -121,7 +124,6 @@ export const updateBookingStatus = async (req, res) => {
         if (rows.length === 0) return error(res, 'Booking not found', 404);
         const booking = rows[0];
 
-        // Auth Logic: Trainer cek ke session.trainer_id, Customer cek ke booking.member_id
         if (req.user.role === 'customer' && (req.user.id !== booking.member_id || status !== 'Cancel')) {
             return error(res, 'Unauthorized to change status', 403);
         }
@@ -134,6 +136,7 @@ export const updateBookingStatus = async (req, res) => {
         cache.del(`customer_booking_history_${booking.member_id}`);
         return success(res, null, 'Status updated');
     } catch (err) {
+        console.error('Database Error updateBookingStatus:', err);
         return error(res, 'Internal server error', 500);
     }
 };
@@ -144,7 +147,7 @@ export const getMyBookings = async (req, res) => {
         const db = await getDBPool();
 
         // Join dengan 'trainer' untuk mendapatkan nama pelatih
-        const [rows] = await db.query(
+        const rows = await db.query(
             `SELECT b.id as booking_id, b.status, s.title, s.start_time, t.nama as trainer_name
              FROM booking b
              JOIN session s ON b.session_id = s.id

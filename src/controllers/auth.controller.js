@@ -15,7 +15,7 @@ export const login = async (req, res) => {
         let role = null;
 
         // 1. Cari di tabel user (customer)
-        const [customerRows] = await db.query('SELECT * FROM user WHERE email = ?', [email]);
+        const customerRows = await db.query('SELECT * FROM user WHERE email = ?', [email]);
         if (customerRows.length > 0) {
             user = customerRows[0];
             role = 'customer';
@@ -23,7 +23,7 @@ export const login = async (req, res) => {
 
         // 2. Jika tidak ada, cari di tabel trainer
         if (!user) {
-            const [trainerRows] = await db.query('SELECT * FROM trainer WHERE email = ?', [email]);
+            const trainerRows = await db.query('SELECT * FROM trainer WHERE email = ?', [email]);
             if (trainerRows.length > 0) {
                 user = trainerRows[0];
                 role = 'trainer';
@@ -32,7 +32,7 @@ export const login = async (req, res) => {
 
         // 3. Jika masih tidak ada, cari di tabel admin
         if (!user) {
-            const [adminRows] = await db.query('SELECT * FROM admin WHERE email = ?', [email]);
+            const adminRows = await db.query('SELECT * FROM admin WHERE email = ?', [email]);
             if (adminRows.length > 0) {
                 user = adminRows[0];
                 role = 'admin';
@@ -96,8 +96,16 @@ export const registerUser = async (req, res) => {
         );
 
         cache.del('user_stats');
-        res.status(201).json({ id: result.insertId, nama, email, role: 'customer', message: 'Customer berhasil didaftarkan.' });
+        res.status(201).json({ id: result.insertId.toString(), nama, email, role: 'customer', message: 'Customer berhasil didaftarkan.' });
     } catch (error) {
+        // PERUBAHAN: Menambahkan console.error untuk melihat pesan asli dari database
+        console.error('Database Error during User Registration:', error);
+
+        // Cek jika error karena email duplikat
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ message: 'Email sudah terdaftar. Silakan gunakan email lain.' });
+        }
+
         res.status(500).json({ message: 'Gagal mendaftarkan customer.' });
     }
 };
@@ -120,7 +128,7 @@ export const registerTrainer = async (req, res) => {
         );
 
         cache.del('all_trainers');
-        res.status(201).json({ id: result.insertId, nama, email, role: 'trainer', message: 'Trainer berhasil didaftarkan.' });
+        res.status(201).json({ id: result.insertId.toString(), nama, email, role: 'trainer', message: 'Trainer berhasil didaftarkan.' });
     } catch (error) {
         res.status(500).json({ message: 'Gagal mendaftarkan trainer.' });
     }
@@ -143,7 +151,7 @@ export const registerAdmin = async (req, res) => {
             [nama, email, passwordHash]
         );
 
-        res.status(201).json({ id: result.insertId, nama, email, role: 'admin', message: 'Admin berhasil didaftarkan.' });
+        res.status(201).json({ id: result.insertId.toString(), nama, email, role: 'admin', message: 'Admin berhasil didaftarkan.' });
     } catch (error) {
         res.status(500).json({ message: 'Gagal mendaftarkan admin.' });
     }

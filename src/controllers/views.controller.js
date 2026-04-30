@@ -74,14 +74,19 @@ export const trainer_schedule = async (req, res) => {
         const trainerId = id || req.user.id;
 
         const db = await getDBPool();
-        // View 'trainer_schedule' di DB harus JOIN ke tabel 'trainer' yang baru
+
+        // Hapus tanda [] pada baris ini agar array tidak ter-destructure menjadi objek tunggal
         const rows = await db.query(
-            'SELECT trainer_id, trainer_name, session_id, title, start_time, end_time, confirmed_customers FROM trainer_schedule WHERE trainer_id = ?',
+            `SELECT s.*, 
+                (SELECT COUNT(*) FROM booking b WHERE b.session_id = s.id AND b.status != 'Confirmed') as confirmed_customers
+             FROM session s 
+             WHERE s.trainer_id = ?`,
             [trainerId]
         );
 
         return success(res, rows, 'Trainer schedule fetched successfully');
     } catch (err) {
+        console.error("Error trainer_schedule:", err);
         return error(res, 'Internal server error', 500);
     }
 };
@@ -143,26 +148,34 @@ export const member_progress_summary = async (req, res) => {
 // 3. Get session participants (All or by session ID)
 export const session_participants = async (req, res) => {
     try {
-        const { id } = req.params; // session_id
-        const cacheKey = id ? `view_session_participants_${id}` : 'view_session_participants';
-
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) return success(res, cachedData, 'Session participants fetched (cache)');
-
+        const { id } = req.params;
         const db = await getDBPool();
-        let query = 'SELECT * FROM session_participants';
+
+        // Menggunakan JOIN langsung agar kolom trainer_id & customer_name pasti terbawa
+        let query = `
+            SELECT 
+                b.id as booking_id, 
+                b.status, 
+                b.member_id as customer_id, 
+                u.nama as customer_name,
+                s.id as session_id, 
+                s.title as session_title, 
+                s.trainer_id
+            FROM booking b
+            JOIN session s ON b.session_id = s.id
+            JOIN user u ON b.member_id = u.id
+        `;
         let params = [];
 
-        if (id) {
-            query += ' WHERE session_id = ?';
-            params = [id];
+        if (id && id !== 'undefined') {
+            query += ' WHERE s.id = ?';
+            params.push(id);
         }
 
         const rows = await db.query(query, params);
-        cache.set(cacheKey, rows, 300);
-
-        return success(res, rows, 'Session participants fetched successfully');
+        return success(res, rows, 'Session participants fetched');
     } catch (err) {
+        console.error("Error session_participants:", err);
         return error(res, 'Internal server error', 500);
     }
 };
