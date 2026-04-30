@@ -8,6 +8,6 @@ const router = express.Router();
 router.get('/', authMiddleware, adminReq, getAllReviews);
 router.get('/session/:session_id', getSessionReviews);
 router.post('/', authMiddleware, createReview);
-router.delete('/:id', authMiddleware, adminReq, deleteReview);
+router.delete('/:id', authMiddleware, deleteReview);
 
 export default router;

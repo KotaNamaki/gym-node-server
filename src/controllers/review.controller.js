@@ -36,6 +36,11 @@ export const createReview = async (req, res) => {
         const {session_id, rating_score, comment} = req.body;
         const member_id = req.user.id;
 
+        // Tambahan: Pastikan hanya customer yang bisa membuat review
+        if (req.user.role !== 'customer') {
+            return error(res, 'Only customers can review sessions', 403);
+        }
+
         if (!session_id || !rating_score) {
             return error(res, 'Session_id and rating_score are required', 400);
         }

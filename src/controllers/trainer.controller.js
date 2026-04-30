@@ -10,8 +10,9 @@ export const getAllTrainers = async (req, res) => {
         const limit = parseInt(_limit) || 20;
         const offset = (page - 1) * limit;
 
-        let query = "SELECT id, nama, email, role, propinsi, kota FROM user WHERE role = 'trainer'";
-        let countQuery = "SELECT COUNT(*) as total FROM user WHERE role = 'trainer'";
+        // FIX: Query langsung ke tabel 'trainer' tanpa filter role
+        let query = "SELECT id, nama, email, spesialisasi, propinsi, kota FROM trainer WHERE 1=1";
+        let countQuery = "SELECT COUNT(*) as total FROM trainer WHERE 1=1";
         let params = [];
 
         if (nama) {
@@ -32,20 +33,40 @@ export const getAllTrainers = async (req, res) => {
     }
 };
 
+export const getTrainerName = async (req, res) => {
+    try {
+        const { nama } = req.params;
+        const cacheKey = `trainer_${nama}`;
+        const cachedData = cache.get(cacheKey);
+        if (cachedData) return res.json(cachedData);
+
+        const db = await getDBPool();
+        // FIX: Query ke tabel 'trainer'
+        const rows = await db.query(
+            "SELECT id, nama, email, spesialisasi, propinsi, kota FROM trainer WHERE nama = ?",
+            [nama]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Trainer not found' });
+        }
+
+        cache.set(cacheKey, rows[0]);
+        res.json(rows[0]);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching trainer.' });
+    }
+};
 export const getTrainerById = async (req, res) => {
-    console.log('[Controller] getTrainerById called', req.params.id);
     try {
         const { id } = req.params;
         const cacheKey = `trainer_${id}`;
         const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            console.log('[Cache] Hit for', cacheKey);
-            return res.json(cachedData);
-        }
+        if (cachedData) return res.json(cachedData);
 
         const db = await getDBPool();
+        // FIX: Query ke tabel 'trainer'
         const rows = await db.query(
-            "SELECT id, nama, email, role, propinsi, kota FROM user WHERE id = ? AND role = 'trainer'",
+            "SELECT id, nama, email, spesialisasi, propinsi, kota FROM trainer WHERE id = ?",
             [id]
         );
         if (rows.length === 0) {
@@ -53,106 +74,59 @@ export const getTrainerById = async (req, res) => {
         }
 
         cache.set(cacheKey, rows[0]);
-        console.log('[Cache] Miss for', cacheKey, '- Data cached');
-
         res.json(rows[0]);
     } catch (error) {
-        console.error(`Failed to get trainer_id ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error fetching trainer.' });
     }
 };
-
-export const getTrainerNameById = async (req, res) => {
-    console.log('[Controller] getTrainerNameById called', req.params.id);
+export const getTrainerSchedule = async (req, res) => {
     try {
         const { id } = req.params;
-        const db = await getDBPool();
-        const rows = await db.query(
-            "SELECT nama FROM user WHERE id = ? AND role = 'trainer'",
-            [id]
-        );
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'Trainer not found' });
-        }
-        res.json({ id, nama: rows[0].nama });
-    } catch (error) {
-        console.error(`Failed to get trainer name for id ${req.params.id}:`, error);
-        res.status(500).json({ message: 'Error fetching trainer name.' });
-    }
-};
-
-export const getTrainerSchedule = async (req, res) => {
-    console.log('[Controller] getTrainerSchedule called', req.params.id);
-    try {
-        const { id } = req.params || {};
         const trainerId = id || req.user.id;
 
-        // Non-admin trainers can only view their own schedule
+        // Validasi akses tetap diperlukan[cite: 15]
         if (req.user.role === 'trainer' && req.user.id !== parseInt(trainerId)) {
-            return res.status(403).json({ message: 'Forbidden: You can only view your own schedule' });
-        }
-
-        const cacheKey = `view_trainer_schedule_${trainerId}`;
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            console.log('[Cache] Hit for', cacheKey);
-            return res.json(cachedData);
+            return res.status(403).json({ message: 'Forbidden: Access denied' });
         }
 
         const db = await getDBPool();
+        // Menggunakan view yang sudah disiapkan di database[cite: 2, 15]
         const rows = await db.query(
-            'SELECT trainer_id, trainer_name, session_id, title, start_time, end_time, confirmed_customers FROM trainer_schedule WHERE trainer_id = ?',
+            'SELECT * FROM trainer_schedule WHERE trainer_id = ?',
             [trainerId]
         );
 
-        cache.set(cacheKey, rows, 300);
-        console.log('[Cache] Miss for', cacheKey, '- Data cached');
-
         res.json(rows);
     } catch (error) {
-        console.error(`Failed to get schedule for trainer:`, error);
-        res.status(500).json({ message: 'Error fetching trainer schedule.' });
+        res.status(500).json({ message: 'Error fetching schedule.' });
     }
 };
 
 export const updateTrainer = async (req, res) => {
-    console.log('[Controller] updateTrainer called', req.params.id);
     try {
         const { id } = req.params;
-        const { nama, email, propinsi, kota } = req.body;
+        const { nama, email, spesialisasi, propinsi, kota } = req.body;
         const loggedInUser = req.user;
 
-        if (loggedInUser.role !== 'admin' && loggedInUser.id !== parseInt(id)) {
-            return res.status(403).json({ message: 'Forbidden: You can only update your own profile' });
+        // Pastikan hanya admin atau pelatih ybs yang bisa update[cite: 15]
+        if (loggedInUser.role !== 'admin' && (loggedInUser.role !== 'trainer' || loggedInUser.id !== parseInt(id))) {
+            return res.status(403).json({ message: 'Forbidden' });
         }
 
         const db = await getDBPool();
+        const [existing] = await db.query("SELECT * FROM trainer WHERE id = ?", [id]);
+        if (!existing) return res.status(404).json({ message: 'Trainer not found' });
 
-        const rows = await db.query("SELECT * FROM user WHERE id = ? AND role = 'trainer'", [id]);
-        if (rows.length === 0) {
-            return res.status(404).json({ message: 'Trainer not found' });
-        }
-        const existing = rows[0];
-
-        const updateData = {
-            nama: nama || existing.nama,
-            email: email || existing.email,
-            propinsi: propinsi || existing.propinsi,
-            kota: kota || existing.kota
-        };
-
+        // FIX: Update ke tabel 'trainer'[cite: 2, 15]
         await db.query(
-            "UPDATE user SET nama = ?, email = ?, propinsi = ?, kota = ? WHERE id = ? AND role = 'trainer'",
-            [updateData.nama, updateData.email, updateData.propinsi, updateData.kota, id]
+            "UPDATE trainer SET nama = ?, email = ?, spesialisasi = ?, propinsi = ?, kota = ? WHERE id = ?",
+            [nama || existing.nama, email || existing.email, spesialisasi || existing.spesialisasi, propinsi || existing.propinsi, kota || existing.kota, id]
         );
 
         cache.del('all_trainers');
         cache.del(`trainer_${id}`);
-        console.log('[Cache] Invalidated for updated trainer', id);
-
-        res.json({ message: 'Trainer updated successfully', trainer: { id, ...updateData } });
+        res.json({ message: 'Trainer updated successfully' });
     } catch (error) {
-        console.error(`Failed to update trainer_id ${req.params.id}:`, error);
         res.status(500).json({ message: 'Error updating trainer.' });
     }
 };

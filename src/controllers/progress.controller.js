@@ -42,10 +42,14 @@ export const getMyProgress = async (req, res) => {
 };
 
 export const createProgress = async (req, res) => {
-    console.log('[Controller] createProgress called', req.body);
     try {
         const { booking_id, activity, duration, note } = req.body;
         const member_id = req.user.id;
+
+        // Pastikan role-nya adalah customer
+        if (req.user.role !== 'customer') {
+            return error(res, 'Only customers can record progress', 403);
+        }
 
         if (!activity || !duration || !note) {
             return error(res, 'Activity, duration, and note are required', 400);
@@ -53,14 +57,14 @@ export const createProgress = async (req, res) => {
 
         const db = await getDBPool();
 
-        // Validate booking_id if provided: must belong to member and be Confirmed
+        // Validasi booking: Pastikan booking_id tersebut milik member ini (dari tabel user)
         if (booking_id) {
-            const booking = await db.query(
+            const [booking] = await db.query(
                 "SELECT id FROM booking WHERE id = ? AND member_id = ? AND status = 'Confirmed'",
                 [booking_id, member_id]
             );
             if (booking.length === 0) {
-                return error(res, 'Booking not found, not yours, or not confirmed', 400);
+                return error(res, 'Booking not found or not confirmed', 400);
             }
         }
 
@@ -69,14 +73,9 @@ export const createProgress = async (req, res) => {
             [member_id, booking_id || null, activity, duration, note]
         );
 
-        // FIX: Use top-level cache import synchronously instead of async dynamic import
-        cache.del('view_member_progress_summary');
         cache.del(`view_member_progress_summary_${member_id}`);
-        console.log('[Cache] Invalidated progress summary cache');
-
-        return success(res, { id: Number(result.insertId) }, 'Progress recorded successfully', 201);
+        return success(res, { id: Number(result.insertId) }, 'Progress recorded', 201);
     } catch (err) {
-        console.error('Create progress error:', err);
         return error(res, 'Internal server error', 500);
     }
 };

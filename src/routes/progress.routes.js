@@ -8,6 +8,6 @@ const router = express.Router();
 router.get('/', authMiddleware, adminReq, getAllProgress);
 router.get('/my', authMiddleware, getMyProgress);
 router.post('/', authMiddleware, createProgress);
-router.delete('/:id', authMiddleware, adminReq, deleteProgress);
+router.delete('/:id', authMiddleware, deleteProgress);
 
 export default router;
