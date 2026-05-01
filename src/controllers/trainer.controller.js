@@ -4,14 +4,17 @@ import cache from '../utils/cache.js';
 export const getAllTrainers = async (req, res) => {
     try {
         const db = await getDBPool();
-        const { nama, email, _page, _limit } = req.query;
 
-        const page = parseInt(_page) || 1;
-        const limit = parseInt(_limit) || 20;
-        const offset = (page - 1) * limit;
+        // 1. TANGKAP PARAMETER TANPA UNDERSCORE (sesuai log URL)
+        const { nama, email, page, limit } = req.query;
 
-        // FIX: Query langsung ke tabel 'trainer' tanpa filter role
-        let query = "SELECT id, nama, email, spesialisasi, propinsi, kota FROM trainer WHERE 1=1";
+        // Berikan fallback jika parameter kosong
+        const currentPage = parseInt(page) || 1;
+        const currentLimit = parseInt(limit) || 20;
+        const offset = (currentPage - 1) * currentLimit;
+
+        // 2. WAJIB ADA ALIAS "id" & "specialization" (Sesuai field di Datagrid)
+        let query = "SELECT id, nama, email, spesialisasi AS specialization, propinsi, kota FROM trainer WHERE 1=1";
         let countQuery = "SELECT COUNT(*) as total FROM trainer WHERE 1=1";
         let params = [];
 
@@ -21,14 +24,21 @@ export const getAllTrainers = async (req, res) => {
             params.push(`%${nama}%`);
         }
 
-        const rows = await db.query(query + ' LIMIT ? OFFSET ?', [...params, limit, offset]);
+        const rows = await db.query(query + ' LIMIT ? OFFSET ?', [...params, currentLimit, offset]);
         const countResult = await db.query(countQuery, params);
-        const total = countResult[0]?.total || 0;
-
+        const total = Number(countResult[0]?.total || 0);
+        // Header ini membantu react-admin jika tidak membaca json.total
         res.setHeader('X-Total-Count', total);
         res.setHeader('Access-Control-Expose-Headers', 'X-Total-Count');
-        res.json(rows);
+
+        // 3. WAJIB DIBUNGKUS DALAM OBJEK "data" dan "total" (Syarat dataProvider.ts)
+        res.status(200).json({
+            data: rows,
+            total: total
+        });
+
     } catch (error) {
+        console.error("Error di getAllTrainers:", error);
         res.status(500).json({ message: 'Error fetching trainers.' });
     }
 };
@@ -61,20 +71,23 @@ export const getTrainerById = async (req, res) => {
         const { id } = req.params;
         const cacheKey = `trainer_${id}`;
         const cachedData = cache.get(cacheKey);
-        if (cachedData) return res.json(cachedData);
+
+        // Wajib dibungkus "data"
+        if (cachedData) return res.json({ data: cachedData });
 
         const db = await getDBPool();
-        // FIX: Query ke tabel 'trainer'
         const rows = await db.query(
-            "SELECT id, nama, email, spesialisasi, propinsi, kota FROM trainer WHERE id = ?",
+            "SELECT id, nama, email, spesialisasi AS specialization, propinsi, kota FROM trainer WHERE id = ?",
             [id]
         );
+
         if (rows.length === 0) {
             return res.status(404).json({ message: 'Trainer not found' });
         }
 
         cache.set(cacheKey, rows[0]);
-        res.json(rows[0]);
+        // Wajib dibungkus "data"
+        res.json({ data: rows[0] });
     } catch (error) {
         res.status(500).json({ message: 'Error fetching trainer.' });
     }
